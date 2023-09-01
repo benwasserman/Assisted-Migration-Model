@@ -1,0 +1,74 @@
+---
+title: "Assisted Migration Model"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+#Setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+#Landscape
+```{r landscape}
+
+LAND = data.frame(Grad = 1:100, Env = sample(1:100, replace = TRUE))
+plot(Env~Grad, data = LAND)
+```
+
+#Generate Populations
+```{r pops}
+
+#Initialize Population Array
+#100 sheets for 100 sites
+#60 columns per individual represent 2 alleles each for each of 20 locii - 10 related to Env, 10 related to Grad, the first 10 are the Grad from mom, next 10 are the Grad from dad, next 10 are the Env from mom, next 10 are the Env from dad
+POPS <- array(dim = c(100,1000,41))
+POPS[,,1] <- sample(c("M", "F"), 100000, replace = TRUE)
+#Took about 14 seconds
+#Assign each allele with a a mean of 
+for(i in 1:100){
+  for (j in 1:1000){
+    for (k in 1:20){ 
+      POPS[i,j,k+1] <- rnorm(1, LAND$Grad[i], 0.3)
+      POPS[i,j,k+21] <- rnorm(1, LAND$Env[i], 0.3)
+      
+      }
+  }
+}
+
+#What if I make it a 2D array with a column for location 
+POPS2  <- data.frame(Grad = LAND$Grad, Env = LAND$Env)
+
+```
+
+#Define Functions
+functions for different stages of the model: selection, dispersal, birth
+```{r functions}
+#selection/survival
+
+
+
+#dispersal
+
+
+#birth
+
+
+
+```
+
+#Simulation
+```{r simulation}
+
+ts         <- 0;
+time_steps <- 20;
+POPS_hist  <- NULL; # Here's the list
+while(ts < time_steps){
+    POPS            <- movement(POPS)
+    ts              <- ts + 1
+    POPS_hist[[ts]] <- POPS; # Add to list
+}
+print(POPS);
