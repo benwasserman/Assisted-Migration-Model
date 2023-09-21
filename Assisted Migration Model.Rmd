@@ -8,60 +8,219 @@ output: html_document
 #Setup
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
+options("print.matrix" = FALSE)
 library(tidyverse)
+library(spatstat.geom)
+```
+
+#Define Constants
+```{r constants}
+Si <- 50 #Number of sites
+K <- 100 #Carrying capacity in each site
+L <- 20 #Total number of Locii
+
+Mu0 <- 0.1 #Baseline mortality
 ```
 
 #Landscape
 ```{r landscape}
 
-LAND = data.frame(Grad = 1:100, Env = sample(1:100, replace = TRUE))
+
+LAND = data.frame(Grad = 1:Si, Env = sample(1:Si, replace = TRUE))
 plot(Env~Grad, data = LAND)
+
+
 ```
 
 #Generate Populations
 ```{r pops}
 
 #Initialize Population Array
-#100 sheets for 100 sites
-#60 columns per individual represent 2 alleles each for each of 20 locii - 10 related to Env, 10 related to Grad, the first 10 are the Grad from mom, next 10 are the Grad from dad, next 10 are the Env from mom, next 10 are the Env from dad
-POPS <- array(dim = c(100,1000,41))
-POPS[,,1] <- sample(c("M", "F"), 100000, replace = TRUE)
-#Took about 14 seconds
-#Assign each allele with a a mean of 
-for(i in 1:100){
-  for (j in 1:1000){
-    for (k in 1:20){ 
-      POPS[i,j,k+1] <- rnorm(1, LAND$Grad[i], 0.3)
-      POPS[i,j,k+21] <- rnorm(1, LAND$Env[i], 0.3)
-      
-      }
-  }
-}
+#50 sheets for 50 sites
+#First 9 columns: Sex, MomID, DadID, Mate, MateID, Offspring#, GradMismatch, EnvMismatch, Died?
+#MomID and DadID can just be the row number, not an ID column that we keep track of because it will just be used to determine genotype during the reproduction phase, then the info can be lost/reset
+#Mate Binary indicator, will they mate this time step (1) or not (0) 
+# MateID will be the row number of the mate, not an ID column
+#Offspring # will be reset each time step
+#GradMismatch and EnvMismatch shows how far the individual is from the mean
+#As will Died?
+#then there will be 40 columns per individual representing 2 alleles each for each of 20 locii - 10 related to Env, 10 related to Grad, the first 10 are the Grad from mom, next 10 are the Grad from dad, next 10 are the Env from mom, next 10 are the Env from dad
 
-#What if I make it a 2D array with a column for location 
-POPS2  <- data.frame(Grad = LAND$Grad, Env = LAND$Env)
+#Initialize Full population
+POPS <- array(dim = c(K,11+2*L, Si))
+#We can set Female = 0, Male = 1
+POPS[,1,] <- sample(c(0,1), Si*K, replace = TRUE)
+#Normal variation in genotype
+POPS[,10:49,] <- rnorm(2*L*K*Si, 0, 0.03)
+#Add Grad Mean to first 20 
+POPS[,10:29,] <- POPS[,10:29,] + array(data = sort(rep(LAND$Grad/20, K*L)), dim = c(K, L, Si)) 
+#Add Env Means to second 20
+POPS[,30:49,] <- POPS[,30:49,] + array(data = as.vector(simplify2array(lapply(LAND$Env/20, rep, times = 100*L), higher = TRUE)), dim = c(K, L, Si))
+#POPS[,50,] is going to be dispersal [,51] is going to be dispersaltarget
+#Give Phenotypes
+POPS[,7,] <-apply(POPS[,10:29,], MARGIN = c(1,3), sum)
+
+#using rowSums may speed it up over apply but I'll come. ack to this point
+#apermPOPS213 <- aperm(POPS, perm = c(2,1,3)) 
+#POPS[,7,] <- rowSums(aperm(POPS[,10:29,], na.rm = TRUE)
+POPS[,8,] <- apply(POPS[,30:49,], MARGIN = c(1,3), sum)  
+
+  
 
 ```
 
 #Define Functions
-functions for different stages of the model: selection, dispersal, birth
+functions for different stages of the model: death, mate choice, reproduction, dispersal, environmental change
 ```{r functions}
-#selection/survival
 
 
+#Mortality
+death <- function(POPS){
+  #Phenotypic mismatch
+  #Site Means
+  LANDarray <- simplify2array(apply(LAND, MARGIN = 1, FUN = function(x) matrix(data = x, ncol = 2, nrow = 100, byrow = TRUE), simplify = FALSE))
+  #2D euclidean distance
+  Dist <- sqrt((POPS[,7,]-LANDarray[,1,])^2+(POPS[,8,]-LANDarray[,2,])^2)
+  #Set probability of surviving this time-step proportional to Dist + some baseline mortality
+  POPS[,9,] <- rbinom(5000,1,Dist+Mu0)
+  deathfun <- function(x) {
+    x[which(x[,9]==1),]<-NA
+    return(x)
+  }
+  POPS <- simplify2array(apply(POPS, MARGIN = 3, FUN = deathfun, simplify = FALSE))
+  return(POPS)
+}
 
-#dispersal
+POPS <- death(POPS)
 
 
-#birth
+#Mate Choice
+#Mate choice is going to be a function we apply to a single population matrix, and then we are going to apply it across the third dimension of the array
+matechoice <- function(x){
+  
+  mfcount <- c(sum(x[,1]==0, na.rm = TRUE), sum(x[,1]==1, na.rm = TRUE))
+  mincount <- min(mfcount, na.rm = TRUE)
+  femalemin <- as.numeric(mfcount[1]<=mfcount[2])
+  
+  if(femalemin == 1) {
+    matedfemaleindex <- which(x[,1]==0)
+  }
+  if(femalemin == 0) {
+    matedfemaleindex <- sample(which(x[,1]==0), size = mincount, replace = FALSE)
+  }
+  maleindex <- which(x[,1]==1)
+  x[matedfemaleindex,4]<-1
+  x[matedfemaleindex,5] <- sample(maleindex, size = mincount, replace = FALSE)
+  
+  #Generate the offspring number per female
+  x[which((x[,4]==1)&(x[,1]==0)), 6] <- rpois(sum(x[,4], na.rm = TRUE), lambda = 2)
+  
+  return(x)
+}
 
+POPS <- simplify2array(apply(POPS, MARGIN = 3, FUN = matechoice, simplify = FALSE))
+
+#reproduction
+#I'll structure this like mate choice, as a process to happen to a 2d population matrix, and then I'll apply it along the third axis of the array
+reproducedisperse <- function(x) {
+  
+  offspring <- matrix(data = NA, nrow = )
+  
+  
+  #Generate the offspring number per female
+  x[which((x[,4]==1)&(x[,1]==0)), 6] <- rpois(sum(x[,4], na.rm = TRUE), lambda = 2)
+
+  #all available rows
+  availableindex <- which(is.na(x[,1]))
+  #take the minimum length of all available rows, or the total number of offspring produced
+  availableindex <- availableindex[1:min(length(availableindex), sum(x[,6], na.rm = TRUE))]
+  #Randomly assign gender
+  x[availableindex, 1] <- sample(c(0,1), size = length(availableindex), replace = TRUE)
+  #Identify mothers
+  x[availableindex,2] <- sample(rep(which(x[,4]==1),x[which(x[,4]==1),6]), size = length(availableindex), replace = FALSE)
+  #Identify matched fathers
+  x[availableindex,3] <- x[x[availableindex,2],5]
+  
+  #Sample new genotypes, take one of mom's alleles
+  
+  x[availableindex,10] <- apply(x[x[availableindex,2],c(10,20)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,11] <- apply(x[x[availableindex,2],c(11,21)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,12] <- apply(x[x[availableindex,2],c(12,22)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,13] <- apply(x[x[availableindex,2],c(13,23)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,14] <- apply(x[x[availableindex,2],c(14,24)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,15] <- apply(x[x[availableindex,2],c(15,25)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,16] <- apply(x[x[availableindex,2],c(16,26)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,17] <- apply(x[x[availableindex,2],c(17,27)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,18] <- apply(x[x[availableindex,2],c(18,28)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,19] <- apply(x[x[availableindex,2],c(19,29)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,30] <- apply(x[x[availableindex,2],c(30,40)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,31] <- apply(x[x[availableindex,2],c(31,41)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,32] <- apply(x[x[availableindex,2],c(32,42)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,33] <- apply(x[x[availableindex,2],c(33,43)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,34] <- apply(x[x[availableindex,2],c(30,44)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,35] <- apply(x[x[availableindex,2],c(31,45)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,36] <- apply(x[x[availableindex,2],c(32,46)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,37] <- apply(x[x[availableindex,2],c(33,47)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,38] <- apply(x[x[availableindex,2],c(30,48)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,39] <- apply(x[x[availableindex,2],c(31,49)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  
+  #and one of dad's
+  x[availableindex,20] <- apply(x[x[availableindex,3],c(10,20)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,21] <- apply(x[x[availableindex,3],c(11,21)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,22] <- apply(x[x[availableindex,3],c(12,22)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,23] <- apply(x[x[availableindex,3],c(13,23)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,24] <- apply(x[x[availableindex,3],c(14,24)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,25] <- apply(x[x[availableindex,3],c(15,25)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,26] <- apply(x[x[availableindex,3],c(16,26)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,27] <- apply(x[x[availableindex,3],c(17,27)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,28] <- apply(x[x[availableindex,3],c(18,28)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,29] <- apply(x[x[availableindex,3],c(19,29)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,40] <- apply(x[x[availableindex,3],c(30,40)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,41] <- apply(x[x[availableindex,3],c(31,41)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,42] <- apply(x[x[availableindex,3],c(32,42)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,43] <- apply(x[x[availableindex,3],c(33,43)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,44] <- apply(x[x[availableindex,3],c(30,44)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,45] <- apply(x[x[availableindex,3],c(31,45)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,46] <- apply(x[x[availableindex,3],c(32,46)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,47] <- apply(x[x[availableindex,3],c(33,47)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,48] <- apply(x[x[availableindex,3],c(30,48)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  x[availableindex,49] <- apply(x[x[availableindex,3],c(31,49)], MARGIN = 1, sample, size = 1, simplify = TRUE)
+  
+  #Potentially need to add some mutations at this step
+    return(x)
+
+}
+
+POPS <- simplify2array(apply(POPS, MARGIN = 3, FUN = reproduce, simplify = FALSE))
+
+dispersal <- function(x){
+  x[which]
+  
+  
+  x[which(!(is.na(x[1,,])),arr.ind=TRUE)[,1],50,which(!(is.na(x[1,,])),arr.ind=TRUE)[,2]] <- rbinom(n = length(which(!is.na(POPS[1,,]))), size = 1, prob = 0.01)
+  x[which(!(is.na(x[1,,]))),51,] <- sample(c(1,-1), size = 1, )*sample(c(1,2,3), replace = TRUE, prob = c(0.9,0.09,0.01))
+  return(x)
+  }
+
+
+POPS2 <- dispersal(POPS)
 
 
 ```
 
 #Simulation
 ```{r simulation}
+
+start_time <- Sys.time()
+ts <- 20
+for(i in 1:ts){
+  POPS<- death(POPS)
+  POPS <- simplify2array(apply(POPS, MARGIN = 3, FUN = matechoice, simplify = FALSE))
+  POPS <- simplify2array(apply(POPS, MARGIN = 3, FUN = reproduce, simplify = FALSE))
+  }
+end_time <- Sys.time()
+end_time - start_time
+
 
 ts         <- 0;
 time_steps <- 20;
