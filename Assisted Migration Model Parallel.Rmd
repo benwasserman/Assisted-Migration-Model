@@ -1,0 +1,573 @@
+---
+title: "Assisted Migration Model"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+#Setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options("print.matrix" = FALSE)
+library(tidyverse)
+library(spatstat.geom)
+library(viridis)
+library(rlang)
+library(ggpubr)
+library(foreach)
+library(doParallel)
+```
+
+#Simulation Function
+```{r, simfunc}
+
+#The param.df should be a dataframe with 20 columns. The number of rows is equal to the number of different scenarios. Such that every row is a unique combination of parameters that we want to run a simulation for.
+#Below are comments showing values I'v ebeen using as defaults before I made this more complicated simulation function, I'm not sure how to program in defaults given the data.frame input value, so I'll just leave them here
+#Also, the order in which these parameters are found is the row
+
+
+# #Landscape Parameters
+# Si <- 50 #Number of sites
+# K <- 500 #Carrying capacity in each site
+# L <- 20 #Total number of Locii
+# 
+# #Population growth/adaptation parameters
+# phenvar <- 0.3 #Starting variance for values of each allele
+# Omega2grad <- 5 #selection strength for gradient
+# Omega2env <- 5 #selection strength for environment
+# S0 <- 0.75 #Baseline survival rate, there will always be some mortality, even for the perfectly adapted
+# MuOff <- 2 #Mean offspring per female per reproductive event
+# MuMovement <- 0.8 #Probability for the geometric distribution of staying still
+# 
+# #Simulation Length
+# timeperiod<- 600
+# 
+# #Gradient Change parameters
+# #Note if deltaGradStart > timperiod, then there will be no gradient change
+# deltaGradStart <- 501 #Starting time point
+# deltaGradRate <- 0.05 #Change per time step
+# deltaGradLength <- 100 #Number of time steps
+# 
+# #Rescue parameters
+# #Note if RescueStart > timeperiod, then there will be no rescue
+# RescueStart <- 550 #Starting time point
+# RescueSites <- 0.1 #Proportion of sites to rescue (lowest RescueSites will be targeted for supplemental gene flow)
+# RescueSize <- 50 #Number of individual to send to each rescue site each year
+# RescueLength <- 3 #Number of time steps to repeat rescue over
+# 
+# 
+# #Mode is the type of genetic rescue strategy to use, below are the 5 options
+# #None: no rescue
+# #Demographic:  rescue from the geographically closest single population
+# #Grad: rescue based on the closest population to the ending value of Grad
+# #GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
+# #Multiple: rescue based on a mix of 5 local populations, not based on Grad or Env
+# RescueMode <- "None"
+# RescueSourceNumber <- 5 #Number of sources to pull from if mode = "Multiple"
+#
+# #Reporting Parameters
+# #EnvType = "Fixed" then all Env in the LAND = Si/2, If "Variable" then Env = sample(1:50, replace = FALSE), note that this will use the same environment for each simulation
+# Verbose = FALSE #If true, then save popovertime, gradovertime, and envovertime for each simulation, if FALSE, then just save # # # ending values
+param.df.template <- data.frame(Si=NA, K=NA, L=NA, phenvar=NA, Omega2grad=NA, Omega2env=NA, S0=NA, MuOff=NA, MuMovement=NA, timperiod=NA, deltaGradStart=NA, deltagradRate=NA, deltaGradLength=NA, RescueStart=NA, RescueSites=NA, RescueSize=NA, RescueLength=NA, RescueMode=NA, RescueSourceNumber=NA)
+
+simfunc <- function(param.df, Envtype, verbose = FALSE, n.cores = 1){
+
+  #attach dataset to make name references easier
+  attach(param.df)
+  
+  #Calculate number of simulations
+  SimNum <- dim(param.df)[1]
+  
+  #End in an error message if one of these conditions is present
+  # if(!(EnvType %in% c("Variable", "Fixed"))) {
+  #   detach(param.df)
+  #   stop("EnvType must be `Variable` or `Fixed`")
+  # }
+  if((Verbose == TRUE) & (SimNum > 1)) {
+    detach(param.df)
+    stop("Verbose only available with a single simulation")
+  }
+  
+  #Set up for parallel processing
+  cores <- min(SimNum, n.cores)
+  #create the cluster
+  my.cluster <- parallel::makeCluster(
+  cores, 
+  type = "FORK"
+  )
+  ## socket cluster with 7 nodes on host 'localhost'
+  #register it to be used by %dopar%
+  doParallel::registerDoParallel(cl = my.cluster)
+
+  ##Set up functions for different life stages
+  
+  #Identify the phenoptypes of each individual
+  phenotypes <- function(z){
+  z[,7,] <-apply(z[,10:29,], MARGIN = c(1,3), sum)
+  z[,8,] <- apply(z[,30:49,], MARGIN = c(1,3), sum)  
+  return(z)
+  }
+  
+  #Mortality
+  death <- function(w){
+    #Phenotypic mismatch
+    #Site Means
+      LANDarray <- simplify2array(apply(LAND, MARGIN = 1, FUN = function(x) matrix(data = x, ncol = 2, nrow = K[i], byrow = TRUE), simplify = FALSE))
+  
+    #Compute mortality probability
+    mortprob <- 1-(exp(((-1)*(w[,7,]-LANDarray[,1,])^2)/Omega2grad[i])*exp(((-1)*(w[,8,]-LANDarray[,2,])^2)/Omega2env[i])*S0[i])
+    #Compute mortality
+    w[,9,] <- rbinom(n=K[i]*Si[i], size=1, prob=mortprob)
+
+    deathfun <- function(y) {
+      y[which(y[,9]==1),]<-NA
+      y<-y[order(y[,1]),]
+      return(y)
+    }
+    w <- simplify2array(apply(w, MARGIN = 3, FUN = deathfun, simplify = FALSE))
+    return(w)
+  }
+  
+  #Mate Choice
+  #Mate choice is going to be a function we apply to a single population matrix, and then we are going to apply it across the third dimension of the array
+  matechoice <- function(v){
+  
+    #Reset several columns from last time
+    v[,4:6] <- 0
+    mfcount <- c(sum(v[,1]==0, na.rm = TRUE), sum(v[,1]==1, na.rm = TRUE))
+    mincount <- min(mfcount, na.rm = TRUE)
+    femalemin <- as.numeric(mfcount[1]<=mfcount[2])
+    
+    if(femalemin == 1) {
+      matedfemaleindex <- which(v[,1]==0)
+    }
+    if(femalemin == 0) {
+      matedfemaleindex <- sample(which(v[,1]==0), size = mincount, replace = FALSE)
+    }
+    maleindex <- which(v[,1]==1)
+    v[matedfemaleindex,4]<-1
+    v[matedfemaleindex,5] <- sample(maleindex, size = mincount, replace = FALSE)
+    
+    #Generate the offspring number per female
+    v[which((v[,4]==1)&(v[,1]==0)), 6] <- rpois(sum(v[,4], na.rm = TRUE), lambda = MuOff[i])
+    
+    return(v)
+  }
+  
+  #reproduction
+
+  #funct is a function used inside the reproducedisperse 
+  #Takes a vector of length two, and gives you a vector  of integers from the first integer to the second
+  #But doesn't allow it to be more than carrying capacity, since this is going to be used to index available spots for   propagulues to land
+  #Also, when nobody is there and nobody lands there, then the result is c(1,0), which we should change to NA
+  funct <- function(r) { 
+    if(r[1]>K[i]) {
+      return(NA)
+    }
+    else if (r[1]>r[2]) {
+      return(NA)
+    }
+    else {
+      return(r[1]:r[2])
+    }
+  }
+ 
+  #Includes reproduction, mutation, dispersal
+  #In this case, x has to be the full population array
+  reproducedisperse <- function(u) {
+  
+    #if no offspring, we can close out of this function, just return the same population array
+    if(sum(u[,6,],na.rm = TRUE)==0) return(u)
+    
+    #Parents: female id, population, father, offspring #
+    parents<- matrix(cbind(which(u[,6,]!=0, arr.ind = TRUE), u[,5,][which(u[,6,]!=0)], u[,6,][which(u[,6,]!=0)])[,c(2,1,3,4)],ncol = 4)
+    #parents <- matrix(parents[which(parents[,4]>0),], ncol = 4)
+    
+    #identify offspring characteristics and parents
+    #cols: source pop, target pop, then the same cols as u...sex, momID, dadID, ...
+    offspring <- matrix(data = NA_real_, nrow = sum(u[,6,], na.rm = TRUE), ncol = 11+2*L[i])
+    offspring[,c(1,4,5)] <- matrix(parents[,1:3],ncol = 3)[rep(seq_along(parents[,4]), parents[,4]),]
+    #This randomizes the order of offspring
+    offspring <- matrix(offspring[sample(nrow(offspring)),], ncol = 11+2*L[i])
+    #identify target population (trying to identify movement first, so that I can take fewer samples of 1/-1, since it won't matter for the 90% that don't move)
+    #identify differential
+    offspring[,2] <- rgeom(n = nrow(offspring), prob = MuMovement[i])
+    #how many move
+    nmigrants <- length(which(offspring[,2]!=0))
+    #if they move, figure out if it's up or down
+    offspring[which(offspring[,2]!=0),2] <- offspring[which(offspring[,2]!=0),2]*sample(c(1,-1), size = nmigrants, replace = TRUE) + offspring[which(offspring[,2]!=0),1]
+    #if they didn't move, set same as parent
+    offspring[which(offspring[,2]==0),2] <- offspring[which(offspring[,2]==0),1]
+    #Keep them within the boundaries
+    offspring[which(offspring[,2]<1),2] <- 1
+    offspring[which(offspring[,2]>Si[i]),2] <- Si[i]
+    
+    #number of offspring landing per site
+    noffspring <- tabulate(offspring[,2], nbins = Si[i])
+    
+    #number of openings in each site
+    openings <- which(is.na(u[,1,]), arr.ind = TRUE)
+    nopenings <- tabulate(openings[,2], nbins = Si[i])
+    
+    #nopportunities = minimum of #openings/#offspring attempting to land there
+    nopportunities <- pmin(nopenings, noffspring)
+      
+    #if nopportunities = 0 then all spots are full, return the same population array
+    if(sum(nopportunities)==0) return(u)
+    
+    #how do we sample offspring so that we have only nopportunities in each deme
+    #The offspring have previously been randomly sorted. Now we sort them by target deme
+    offspring <- matrix(offspring[order(offspring[,2]),], ncol = 11+2*L[i])
+    
+    #set up retained matrix
+    offspringretained <- matrix(NA, nrow = sum(nopportunities, na.rm = TRUE), ncol = 11+2*L[i])
+      
+    #This function retains only the number of offspring that there are room for
+    groupsample <- function(s){
+      return(matrix(offspring[which(offspring[,2]==s),],ncol=ncol(offspring))[sample(nrow(matrix(offspring[which(offspring[,2]==s),],ncol = ncol(offspring))),size = nopportunities[s], replace = FALSE),])
+    }
+    offspringretained <- do.call(rbind, simplify2array(sapply(as.list(1:Si[i]),FUN = groupsample, simplify=TRUE)))
+    
+    #Now I will fill in the genotypes of the sampled individuals
+    #set sex
+    offspringretained[,3]<- rbinom(n = sum(nopportunities, na.rm = TRUE), size = 1, prob = 0.5)
+    #set genotypes
+      
+    moms <- matrix(data = NA_real_, nrow = nrow(offspringretained), ncol = 2*L[i])
+    dads <- matrix(data = NA_real_, nrow = nrow(offspringretained), ncol = 2*L[i])
+    moms <- matrix(u[cbind(rep(offspringretained[,4], each = 2*L[i]), 10:49, rep(offspringretained[,1], each = 2*L[i]))], nrow = nrow(offspringretained), ncol = 2*L[i], byrow = TRUE)
+    dads <- matrix(u[cbind(rep(offspringretained[,5], each = 2*L[i]), 10:49, rep(offspringretained[,1], each = 2*L[i]))], nrow = nrow(offspringretained), ncol = 2*L[i], byrow = TRUE)               
+    
+    #now fill in the offspring retained genotypes by sampling from the correct parent options
+    #Mom's grad values coming from her mom or dad
+    #Note: This is actually setup for a fixed L, in oder to change L from 20, we'd need to change this.
+    offspringretained[,12] <- moms[cbind(1:nrow(offspringretained), sample(c(01,11), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,13] <- moms[cbind(1:nrow(offspringretained), sample(c(02,12), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,14] <- moms[cbind(1:nrow(offspringretained), sample(c(03,13), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,15] <- moms[cbind(1:nrow(offspringretained), sample(c(04,14), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,16] <- moms[cbind(1:nrow(offspringretained), sample(c(05,15), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,17] <- moms[cbind(1:nrow(offspringretained), sample(c(06,16), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,18] <- moms[cbind(1:nrow(offspringretained), sample(c(07,17), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,19] <- moms[cbind(1:nrow(offspringretained), sample(c(08,18), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,20] <- moms[cbind(1:nrow(offspringretained), sample(c(09,19), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,21] <- moms[cbind(1:nrow(offspringretained), sample(c(10,20), size = nrow(offspringretained), replace = TRUE))]
+    #Dad's grad values coming from his mom or dad
+    offspringretained[,22] <- dads[cbind(1:nrow(offspringretained), sample(c(01,11), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,23] <- dads[cbind(1:nrow(offspringretained), sample(c(02,12), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,24] <- dads[cbind(1:nrow(offspringretained), sample(c(03,13), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,25] <- dads[cbind(1:nrow(offspringretained), sample(c(04,14), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,26] <- dads[cbind(1:nrow(offspringretained), sample(c(05,15), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,27] <- dads[cbind(1:nrow(offspringretained), sample(c(06,16), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,28] <- dads[cbind(1:nrow(offspringretained), sample(c(07,17), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,29] <- dads[cbind(1:nrow(offspringretained), sample(c(08,18), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,30] <- dads[cbind(1:nrow(offspringretained), sample(c(09,19), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,31] <- dads[cbind(1:nrow(offspringretained), sample(c(10,20), size = nrow(offspringretained), replace = TRUE))]
+    #Mom's  Env value coming from her mom or dad
+    offspringretained[,32] <- moms[cbind(1:nrow(offspringretained), sample(c(21,31), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,33] <- moms[cbind(1:nrow(offspringretained), sample(c(22,32), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,34] <- moms[cbind(1:nrow(offspringretained), sample(c(23,33), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,35] <- moms[cbind(1:nrow(offspringretained), sample(c(24,34), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,36] <- moms[cbind(1:nrow(offspringretained), sample(c(25,35), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,37] <- moms[cbind(1:nrow(offspringretained), sample(c(26,36), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,38] <- moms[cbind(1:nrow(offspringretained), sample(c(27,37), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,39] <- moms[cbind(1:nrow(offspringretained), sample(c(28,38), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,40] <- moms[cbind(1:nrow(offspringretained), sample(c(29,39), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,41] <- moms[cbind(1:nrow(offspringretained), sample(c(30,40), size = nrow(offspringretained), replace = TRUE))]
+    #Dad's Env value coming from his mom or dad
+    offspringretained[,42] <- dads[cbind(1:nrow(offspringretained), sample(c(21,31), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,43] <- dads[cbind(1:nrow(offspringretained), sample(c(22,32), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,44] <- dads[cbind(1:nrow(offspringretained), sample(c(23,33), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,45] <- dads[cbind(1:nrow(offspringretained), sample(c(24,34), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,46] <- dads[cbind(1:nrow(offspringretained), sample(c(25,35), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,47] <- dads[cbind(1:nrow(offspringretained), sample(c(26,36), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,48] <- dads[cbind(1:nrow(offspringretained), sample(c(27,37), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,49] <- dads[cbind(1:nrow(offspringretained), sample(c(28,38), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,50] <- dads[cbind(1:nrow(offspringretained), sample(c(29,39), size = nrow(offspringretained), replace = TRUE))]
+    offspringretained[,51] <- dads[cbind(1:nrow(offspringretained), sample(c(30,40), size = nrow(offspringretained), replace = TRUE))]
+
+    #Identify and add mutations
+    mutations <- matrix(data = rbinom(n = 2*L[i]*dim(offspringretained)[1], size = 1, prob = 0.001), ncol = 2*L[i])
+    mutations[which(mutations==1)] <-rnorm(n = sum(mutations), mean = 0, sd = 0.0005)
+    offspringretained[,12:(11+2*L[i])]<- offspringretained[,12:(11+2*L[i])]+mutations
+      
+    #This is the basis for how we'll call the empty spaces to put the offspring in 
+      
+    #this should be all the empty spots we need, and we will fill it with the values from offspringretained
+     
+    #calculate population size
+    popsize <- colSums(!is.na(u[,1,]))
+      
+    #this should be all the empty spots we need, and we will fill it with the values from offspringretained
+    rowsneeded <- unlist(apply(cbind(popsize+1, popsize+nopportunities), MARGIN = 1, FUN = funct, simplify = TRUE))
+    rowsneeded <- rowsneeded[which(!is.na(rowsneeded))]
+    u[cbind(rep(rowsneeded, each = dim(u)[2]), 1:dim(u)[2], rep(1:Si[i], times = nopportunities*dim(u)[2]))]<-as.vector(t(offspringretained[,3:(11+2*L[i])]))
+      
+    return(u)
+  }
+  
+  #The genetic rescue is implemented using two functions
+  #donorrecipients identifies and saves a list of donor-recipient populations pairs
+  #rescue moves individuals from donor to recipient populations
+
+  #Rescue a function that moves some individuals around
+  #inputs: p is the POPS population array
+  #strategy is the type of genetic rescue strategy to use, below are the 5 options
+  #None: no rescue
+  #Demographic:  rescue from the geographically closest single population
+  #Grad: rescue based on the closest population to the ending value of Grad
+  #GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
+  #Multiple: rescue based on a mix of 5 local populations
+  #The last parameter is donrecplist: a 2d matrix with 2 columns. The first column is the IDs of donors, the second column is the IDs of recipients. The matrix will have 1 row per recipient population, unless strategy = "Multiple" then it will have (RescueSourceNumber x the number of recipient populations) rows.
+
+  donorrecipients <- function(q, strategy){
+    if(strategy == "None") return(matrix(NA_integer_, ncol = 2))
+    #Now identify populations in need
+    popsizes <- colSums(!is.na(q[,1,]))
+    recipients <- sort(popsizes, index.return = TRUE)$ix[1:floor(Si[i]*RescueSites[i])]
+    eligibledonors <- (1:Si[i])[which(!(1:Si[i] %in% recipients))]
+    #setup donor recipient matrix
+    drmat <- matrix(NA_integer_, ncol = 2, nrow = length(recipients)) #this assumes 1 row per recipient, we'll resave the empty matrix if strategy = "multiple"
+    drmat[,2] <- recipients
+      if(strategy == "Demographic") {
+        drmat[,1] <- min(abs(drmat[,2]-eligibledonors)) 
+      }
+  }
+
+  rescue <- function(p, strategy, donrecplist){
+    if(strategy == "None") return(p)
+    return(NULL)
+  }
+
+  
+  #Create data storage
+
+  if(Verbose == TRUE) {
+    #Set contents for data collection
+    popovertime <- matrix(NA, nrow = timeperiod[i], ncol = Si[i])
+    Gradovertime <- matrix(NA, nrow = timeperiod[i], ncol = Si[i])
+    Envovertime <- matrix(NA, nrow = timeperiod[i], ncol = Si[i])
+    FemaleRatioovertime <- matrix(NA, nrow = timeperiod[i], ncol = Si[i])
+    Gradvarovertime <- matrix(NA, nrow = timeperiod[i], ncol = Si[i])
+    Envvarovertime <- matrix(NA, nrow = timeperiod[i], ncol = Si[i])
+  } else if (Verbose == FALSE) {
+    outdata <- vector(mode='list', length=SimNum)
+  }
+  
+  
+  #create inner function to loop over
+  simfuncinner <- function(){
+    
+    #Make Landscape
+    if (EnvType == "Variable") {LAND <- data.frame(Grad = 1:Si[i], Env = sample(1:Si[i], replace = TRUE))
+    } else if (EnvType == "Fixed") {LAND <- data.frame(Grad = 1:Si[i], Env = Si[i]/2)}
+    
+    #Initialize Full population
+    POPsim <- array(dim = c(K[i],9+2*L[i], Si[i]))
+    #We can set Female = 0, Male = 1
+    POPsim[,1,] <- sample(c(0,1), Si[i]*K[i], replace = TRUE)
+    #Normal variation in genotype
+    POPsim[,10:49,] <- rnorm(2*L[i]*K[i]*Si[i], 0, phenvar[i])
+    #Add Grad Mean to first 20 
+    POPsim[,10:29,] <- POPsim[,10:29,] + array(data = sort(rep(LAND$Grad/20, K[i]*L[i])), dim = c(K[i], L[i], Si[i])) 
+    #Add Env Means to second 20
+    POPsim[,30:49,] <- POPsim[,30:49,] + array(data = as.vector(simplify2array(lapply(LAND$Env/20, rep, times = K[i]*L[i]), higher = TRUE)), dim = c(K[i], L[i], Si[i]))
+    #Identify Phenotypes
+    POPsim[,7,] <-apply(POPsim[,10:29,], MARGIN = c(1,3), sum)
+    POPsim[,8,] <- apply(POPsim[,30:49,], MARGIN = c(1,3), sum)  
+
+    #Simulate Population dynamics    
+    for(t in 1:timeperiod[i]){
+      #No environmental change except in this last else if statement
+      if(t< deltaGradStart[i]){
+      } else if (t >= (deltaGradStart[i] + deltaGradLength[i])){
+      } else {LAND$Grad <- LAND$Grad + deltaGradRate[i]}
+      POPsim <- death(POPsim)
+      POPsim <- simplify2array(apply(POPsim, MARGIN = 3, FUN = matechoice, simplify = FALSE))
+      POPsim <- reproducedisperse(POPsim)
+      POPsim <- phenotypes(POPsim)
+      
+      # Need to identify when rescues will happen
+      #if(t POPS <- rescue(POPS, strategy = "Grad")
+  
+      #If Verbose = True, record full dataset
+      if (Verbose == TRUE) {
+        popovertime[t,] <- colSums(!is.na(POPS[,1,]))
+        Gradovertime[t,] <- colSums(POPS[,7,],na.rm = TRUE)/colSums(!is.na(POPS[,7,]), na.rm = TRUE)-LAND$Grad
+        Envovertime[t,] <- colSums(POPS[,8,],na.rm = TRUE)/colSums(!is.na(POPS[,8,]), na.rm = TRUE)-LAND$Env
+        FemaleRatioovertime[t,] <- colSums(POPS[,1,]==1,na.rm = TRUE)/popovertime[t,]
+        #I'm still developing this Gradvarovertime
+        Gradvarovertime[t,] <- colSums((POPS[,7,]-matrix(rep(Gradovertime[t,],each = K[i]),nrow = K[i]))^2,na.rm = TRUE)/colSums(!is.na(POPS[,7,]), na.rm = TRUE)
+        Envvarovertime[t,] <- colSums((POPS[,8,]-matrix(rep(Gradovertime[t,],each = K[i]),nrow = K[i]))^2,na.rm = TRUE)/colSums(!is.na(POPS[,8,]), na.rm = TRUE)
+      }
+      #Cancel the remainder of the simulation if the entire metapopulation dies out
+      if (sum(POPsim[,1,], na.rm = TRUE)==0) break
+    }
+
+    #Save Ending population and 
+    enddata <- matrix(NA, nrow = 4, ncol = Si[i])
+    enddata[1,]<- colSums(!is.na(POPsim[,1,]))
+    #Maladaptation
+    enddata[2,] <- colSums(POPsim[,7,],na.rm = TRUE)/colSums(!is.na(POPsim[,7,]), na.rm = TRUE)-LAND$Grad
+    enddata[3,] <- colSums(POPsim[,8,],na.rm = TRUE)/colSums(!is.na(POPsim[,8,]), na.rm = TRUE)-LAND$Env
+    #How far did the simulation go, all the way to the end?
+    enddata[4,] <- timeperiod[i]
+
+    #simfuncinner return
+    if(Verbose == TRUE) {return(list(popovertime, Gradovertime, Envovertime, FemaleRatioovertime, Gradvarovertime, Envvarovertime))
+    } else if (Verbose == FALSE) {return(enddata)}  
+  }
+  #For-each loop parallelizes a for-loop which just applies the function simfuncinner over different parameter sets, each parameter set is represented by a different row in the 
+  outdata <- foreach(
+    i = 1:SimNum
+  ) %dopar% {
+    simfuncinner()
+  }
+  
+  parallel::stopCluster(cl = my.cluster)  
+      
+  #Return
+  detach(param.df)
+  if(Verbose == TRUE) {return(list(popovertime, Gradovertime, Envovertime, FemaleRatioovertime, Gradvarovertime, Envvarovertime))
+    } else if (Verbose == FALSE) {return(outdata)}
+  }  
+```
+
+```{r testind}
+param.single.test <- data.frame(Si=50, K=500, L=20, phenvar=0.3, Omega2grad=5, Omega2env=5, S0=0.75, MuOff=2, MuMovement=0.8, timeperiod=500, deltaGradStart=500, deltagradRate=0.05, deltaGradLength=100, RescueStart=550, RescueSites=0.1, RescueSize=50, RescueLength=1, RescueMode="None", RescueSourceNumber=1)
+
+start_time <- Sys.time()
+testoutput <- simfunc(param.single.test, Envtype = "Fixed", verbose = TRUE, n.cores = 1)
+end_time <- Sys.time()
+end_time - start_time
+```
+
+```{r testgroup}
+
+```
+
+#Individual Simulation
+(For Testing)
+```{r simulation}
+
+#PLot all populations over time
+matplot(popovertime)
+matplot(Gradovertime)
+matplot(Envovertime)
+
+#Check Population Sizes
+colSums(!is.na(POPS[,1,]))
+
+#How many of each sex
+colSums(POPS[,1,],na.rm = TRUE)
+colSums(POPS[,1,]==0, na.rm = TRUE)
+colSums(!is.na(POPS[,1,]))
+
+#Ending conditions
+plot(Gradovertime[timeperiod,]+LAND$Grad ~ LAND$Grad, ylab = "Phenotype - Grad", xlab = "Grad")
+points(LAND$Grad~LAND$Grad, col = "red")
+
+plot(Envovertime[timeperiod,]+LAND$Env ~ LAND$Grad, ylab = "Phenotype - Env", xlab = "Grad")
+points(LAND$Env~LAND$Grad, col = "red")
+
+distancefromneighbor <- rowSums(cbind(abs(LAND$Env-lag(LAND$Env)),abs(LAND$Env-lead(LAND$Env))),na.rm=TRUE)/c(1,rep(2,Si-2),1)
+plot(popovertime[timeperiod,]~distancefromneighbor)
+
+plot(Gradovertime[timeperiod,])
+
+```
+
+
+
+#Sensitivity Analysis 
+Execute the simulation function over a range of values
+```{r Sensitivity}
+#Set mig and sel value range
+MigSelvals <- data.frame(Mig = rep(seq(0.1,1,0.1),each = 10), Sel = rep(1:10,10))
+
+
+#Parallel execution with foreach
+start_time <- Sys.time()
+MigSel <- foreach(
+  i = 1:10, 
+  .combine = 'c'
+) %dopar% {
+    simfunc(EnvType = "Fixed", Omega2grad = MigSelvals$Sel[i], Omega2env = MigSelvals$Sel[i], MuOff = 1.25, MuMovement = MigSelvals$Mig[i])
+  }
+MigSel <- array(MigSel, dim = c(4,Si,10))
+  end_time <- Sys.time()
+end_time - start_time
+
+
+# A single for-loop for all values
+MigSel <-array(data = NA, dim = c(4,Si,100))
+for (i in 1:100) {
+  MigSel[,,i] <- simfunc(EnvType = "Variable", Omega2grad = MigSelvals$Sel[i], Omega2env = MigSelvals$Sel[i], MuOff = 1.5, MuMovement = MigSelvals$Mig[i])
+  print(paste("Step",i,Sys.time()))
+}
+
+
+
+save(MigSelvals, MigSel, file = "Outputs/Sensitivity/VariableEnvNoRescueMuOff1.25.Rdata")
+
+```
+
+#Sensitivity Plots
+```{r sensitivityplots}
+
+#Summarize data
+
+#Calculate means
+means <- apply(MigSel, MARGIN = c(1,3), FUN = mean, na.rm = TRUE)
+#Extant Populations Pre-Grad Change
+extantPreGC <- means[4,]>=deltaGradStart
+#Extant Populations Post-Grad Change
+extantPostGC <- means[4,]==timeperiod
+#Populations Over K*4/5
+bigpops <- rowSums(MigSel[1,,]>(K*4/5))
+#Populations Over K*1/5
+notsmallpops <- rowSums(MigSel[1,,]>(K/5))
+#Mean Population Size
+popmeans <- means[1,]
+#Median Population Size
+popmeds <- apply(MigSel[1,,], MARGIN = 2, FUN = median)
+#Standard Deviation of Population Size
+popsds <- apply(MigSel[1,,], MARGIN = 2, FUN = sd)
+
+#Grad
+
+#Mean Maladaptation (Grad Phenotype - Grad)
+gradmeans <- means[2,]
+#Standard Deviation of Maladaptation to Grad
+gradsds <- apply(MigSel[2,,], MARGIN = 2, FUN = sd, na.rm = TRUE)
+#Mean Maladaptation (Env Phenotype - Env)
+envmeans <- means[3,]
+#Standard Deviation of Maladaptation to Env
+envsds <- apply(MigSel[3,,], MARGIN = 2, FUN = sd, na.rm = TRUE)
+
+
+plotdata <- data.frame(Mig = MigSelvals$Mig, Sel = MigSelvals$Sel, extantPreGC, extantPostGC, bigpops, notsmallpops, popmeans, popmeds, popsds, gradmeans, gradsds, envmeans, envsds) %>% mutate(extantPreGC = as.numeric(extantPreGC), extantPostGC = as.numeric(extantPostGC))
+
+
+plotlist <-vector(mode = "list", length = 11)
+for(i in names(plotdata)[3:13]){
+  plotlist[[i]] <- local({
+        i <- i
+        ggplot(data = plotdata, aes(x = Mig, y = Sel)) + geom_raster(aes(fill = .data[[i]])) +  scale_fill_viridis() + theme_classic()
+  })
+  }
+
+
+pdf(file = "Outputs/Sensitivity/Variable Env Plots MuOff1.25.pdf", height = 10, width = 7.5)
+ggpubr::ggarrange(plotlist = plotlist, ncol = 2, nrow = 6)
+dev.off()
+
+
+testfunc <- function(abba) {
+  print(environment())
+  abba+2
+}
+
+print(environment())
+testfunc(12)
+```
+
