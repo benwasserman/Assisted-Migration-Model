@@ -17,9 +17,11 @@ library(ggpubr)
 library(foreach)
 library(doParallel)
 library(gganimate)
-library(magick)
 library(colorspace)
 library(beepr)
+library(av)
+library(gifski)
+library(magick)
 ```
 
 #Define Functions
@@ -107,7 +109,7 @@ funct <- function(r) {
       }
 
 #Includes reproduction, mutation, dispersal
-#In this case, x has to be the full population array
+#In this case, u has to be the full population array
 reproducedisperse <- function(u) {
   
    #if no offspring, we can close out of this function, just return the same population array
@@ -292,237 +294,10 @@ popvar <- function(o){
 
 ```
 
-#Individual Simulation
-(For Testing)
-
-```{r individualsimulation}
-
-###Set Constants
-
-#Landscape Parameters
-Si <- 50 #Number of sites
-K <- 500 #Carrying capacity in each site
-L <- 20 #Total number of Locii
-
-#Population growth/adaptation parameters
-phenvar <- 0.3 #Starting variance for values of each allele
-Omega2grad <- 5 #selection strength for gradient
-Omega2env <- 5 #selection strength for environment
-S0 <- 0.75 #Baseline survival rate, there will always be some mortality, even for the perfectly adapted
-MuOff <- 3 #Mean offspring per female per reproductive event
-MuMovement <- 0.9 #Probability for the geometric distribution of staying still
-
-#Simulation Length
-timeperiod<- 600 
-
-#Gradient Change parameters
-#Note if deltaGradStart > timperiod, then there will be no gradient change
-deltaGradStart <- 501 #Starting time point
-deltaGradRate <- 0.05 #Change per time step
-deltaGradLength <- 100 #Number of time steps
-
-#Rescue parameters
-#Note if RescueStart > timeperiod, then there will be no rescue
-RescueStart <- 550 #Starting time point
-RescueSites <- 0.1 #Proportion of sites to rescue (lowest RescueSites will be targeted for supplemental gene flow)
-RescueSize <- 50 #Number of individual to send to each rescue site each year
-RescueLength <- 3 #Number of time steps to repeat rescue over
-
-
-#Mode is the type of genetic rescue strategy to use, below are the 5 options
-#None: no rescue
-#Demographic:  rescue from the geographically closest single population
-#Grad: rescue based on the closest population to the ending value of Grad
-#GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
-#Multiple: rescue based on a mix of 5 local populations, not based on Grad or Env
-RescueMode <- "None" 
-RescueSourceNumber <- 5 #Number of sources to pull from if mode = "Multiple"
-
-#Is the environment variable or fixed?
-EnvType <- "Variable"
-
-
-###Setup landscape
-  if (EnvType == "Variable") {
-    LAND = data.frame(Grad = 1:Si, Env = sample(1:Si, replace = TRUE))
-  } else if (EnvType == "Fixed") {
-    LAND = data.frame(Grad = 1:Si, Env = as.integer(round(Si/2)))
-  }
-
-###Initialize Population Array
-
-#50 sheets for 50 sites
-#First 9 columns: Sex, MomID, DadID, Mate, MateID, Offspring#, GradPhenotype, EnvPhenotype, Died?
-#MomID and DadID can just be the row number, not an ID column that we keep track of because it will just be used to determine genotype during the reproduction phase, then the info can be lost/reset
-#Mate Binary indicator, will they mate this time step (1) or not (0) 
-# MateID will be the row number of the mate, not an ID column
-#Offspring # will be reset each time step
-#GradMismatch and EnvMismatch shows how far the individual is from the mean
-#As will Died?
-#then there will be 40 columns per individual representing 2 alleles each for each of 20 locii - 10 related to Env, 10 related to Grad, the first 10 are the Grad from mom, next 10 are the Grad from dad, next 10 are the Env from mom, next 10 are the Env from dad
-
-#Initialize Full population
-POPS <- array(dim = c(K,9+2*L, Si))
-#We can set Female = 0, Male = 1
-POPS[,1,] <- sample(c(0,1), Si*K, replace = TRUE)
-#Normal variation in genotype
-POPS[,10:49,] <- rnorm(2*L*K*Si, 0, phenvar)
-#Add Grad Mean to first 20 
-POPS[,10:29,] <- POPS[,10:29,] + array(data = sort(rep(LAND$Grad/20, K*L)), dim = c(K, L, Si)) 
-#Add Env Means to second 20
-POPS[,30:49,] <- POPS[,30:49,] + array(data = as.vector(simplify2array(lapply(LAND$Env/20, rep, times = K*L), higher = TRUE)), dim = c(K, L, Si))
-
-#Identify Phenotypes
-#using rowSums may speed it up over apply but I'll come. ack to this point
-#apermPOPS213 <- aperm(POPS, perm = c(2,1,3)) 
-#POPS[,7,] <- rowSums(aperm(POPS[,10:29,], na.rm = TRUE)
-
-  POPS[,7,] <-apply(POPS[,10:29,], MARGIN = c(1,3), sum)
-  POPS[,8,] <- apply(POPS[,30:49,], MARGIN = c(1,3), sum)  
-  
-
-###Set contents for data collection
-
-landgradovertime <- matrix(NA, nrow = timeperiod, ncol = Si)  
-landenvovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
-popovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
-Gradovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
-Envovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
-FemaleRatioovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
-Gradvarovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
-Envvarovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
-
-
-##Simulation
-start_time <- Sys.time()
-for(t in 1:timeperiod){
-  #No environmental change except in this last else if statement
-  if(t< deltaGradStart){
-  } else if (t >= (deltaGradStart + deltaGradLength)){
-  } else {LAND$Grad <- LAND$Grad + deltaGradRate}
-  POPS <- death(POPS)
-  POPS <- simplify2array(apply(POPS, MARGIN = 3, FUN = matechoice, simplify = FALSE))
-  POPS <- reproducedisperse(POPS)
-  POPS <- phenotypes(POPS)
-  if(t == RescueStart) donorrecipientslist <- donorrecipients(POPS, strategy = RescueMode)
-  # Need to identify when rescues will happen
-  #if(t POPS <- rescue(POPS, strategy = "Grad")
-  landgradovertime[t,] <- LAND$Grad
-  landenvovertime[t,] <- LAND$Env
-  popovertime[t,] <- colSums(!is.na(POPS[,1,]))
-  Gradovertime[t,] <- colSums(POPS[,7,],na.rm = TRUE)/colSums(!is.na(POPS[,7,]), na.rm = TRUE)-LAND$Grad
-  Envovertime[t,] <- colSums(POPS[,8,],na.rm = TRUE)/colSums(!is.na(POPS[,8,]), na.rm = TRUE)-LAND$Env
-  FemaleRatioovertime[t,] <- colSums(POPS[,1,]==1,na.rm = TRUE)/popovertime[t,]
-  #I'm still developing this Gradvarovertime
-  Gradvarovertime[t,] <- apply(POPS[,7,], MARGIN = 2, FUN = popvar)
-  Envvarovertime[t,] <- apply(POPS[,8,], MARGIN = 2, FUN = popvar)
-  print(paste("Step",t,Sys.time()))
-  #Cancel the remainder of the simulation if the entire metapopulation dies out
-  if (sum(POPS[,1,], na.rm = TRUE)==0) break
-
-}
-end_time <- Sys.time()
-end_time - start_time
-
-
-
-###PLot all populations over time
-matplot(popovertime)
-matplot(Gradovertime)
-matplot(Envovertime)
-matplot(Gradvarovertime)
-matplot(Envvarovertime)
-
-#Check Population Sizes
-colSums(!is.na(POPS[,1,]))
-
-#How many of each sex
-colSums(POPS[,1,],na.rm = TRUE)
-colSums(POPS[,1,]==0, na.rm = TRUE)
-colSums(!is.na(POPS[,1,]))
-
-#Ending conditions
-plot(Gradovertime[timeperiod,]+LAND$Grad ~ LAND$Grad, ylab = "Phenotype - Grad", xlab = "Grad")
-points(LAND$Grad~LAND$Grad, col = "red")
-
-plot(Envovertime[timeperiod,]+LAND$Env ~ LAND$Grad, ylab = "Phenotype - Env", xlab = "Grad")
-points(LAND$Env~LAND$Grad, col = "red")
-
-
-
-distancefromneighbor <- rowSums(cbind(abs(LAND$Env-lag(LAND$Env)),abs(LAND$Env-lead(LAND$Env))),na.rm=TRUE)/c(1,rep(2,Si-2),1)
-plot(popovertime[timeperiod,]~distancefromneighbor)
-
-plot(Gradovertime[timeperiod,])
-
-par(mfrow = c(3,1))
-matplot(popovertime)
-matplot(Gradovertime)
-matplot(Envovertime)
-par(mfrow = c(1,1))
-
-
-#Setting up to animate a full single simulation
-
-simdata <- data.frame(Site = NA_integer_, Time = NA_integer_, Variable = NA_character_, Value = NA_real_)
-
-landgradovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Land.Grad", Value = as.vector(landgradovertime))
-landenvovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Land.Env", Value = as.vector(landenvovertime))
-popovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Pop.Size", Value = as.vector(popovertime))
-gradovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Grad.Maladapt", Value = as.vector(Gradovertime))
-envovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Env.Maladapt", Value = as.vector(Envovertime))
-gradvarovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Grad.Var", Value = as.vector(Gradvarovertime))
-envvarovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Env.Var", Value = as.vector(Envvarovertime))
-dataovertimedf <- rbind(popovertimedf, gradovertimedf, envovertimedf, gradvarovertimedf, envvarovertimedf)
-dataovertimedf$Variable <- factor(dataovertimedf$Variable, levels = c("Pop.Size", "Grad.Maladapt", "Grad.Var", "Env.Maladapt", "Env.Var"))
-
-
-landgradplot <- ggplot(data = landgradovertimedf, aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_fill_viridis(limits = c(0,Si), option = "G") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank())
-landgradanim <- landgradplot + labs(title = "{closest_state}") + transition_states(Time)
-landgradgif <- animate(landgradanim, nframes = timeperiod, width = 200)
-
-landenvplot <- ggplot(data = landenvovertimedf, aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_fill_viridis(limits = c(0,Si), option = "G") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank())
-landenvanim <- landenvplot + labs(title = "{closest_state}") + transition_states(Time)
-landenvgif <- animate(landenvanim, nframes = timeperiod, width = 200)
-
-popplot <- ggplot(data = popovertimedf, aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_fill_viridis(limits = c(0,K), option = "D") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank())
-popanim <- popplot + labs(title = "{closest_state}") + transition_states(Time)
-popgif <- animate(popanim, nframes = timeperiod, width = 200)
-
-gradplot <- ggplot(data = gradovertimedf, aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_fill_continuous_divergingx(palette = 'RdBu') +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank())
-gradanim <- gradplot + labs(title = "{closest_state}") + transition_states(Time)
-gradgif <- animate(gradanim, nframes = timeperiod, width = 200)
-
-envplot <- ggplot(data = envovertimedf, aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_fill_continuous_divergingx(palette = 'RdBu') +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank())
-envanim <- envplot + labs(title = "{closest_state}") + transition_states(Time)
-envgif <- animate(envanim, nframes = timeperiod, width = 200)
-
-gradvarplot <- ggplot(data = gradvarovertimedf, aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_fill_viridis(option = "B") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank())
-gradvaranim <- gradvarplot + labs(title = "{closest_state}") + transition_states(Time)
-gradvargif <- animate(gradvaranim, nframes = timeperiod, width = 200)
-
-envvarplot <- ggplot(data = envvarovertimedf, aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_fill_viridis(option = "B") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank())
-envvaranim <- envvarplot + labs(title = "{closest_state}") + transition_states(Time)
-envvargif <- animate(envvaranim, nframes = timeperiod, width = 200)
-
-
-
-new_gif <- image_append(c(landgradgif[1], gradgif[1], gradvargif[1], landenvgif[1], envgif[1], envvargif[1], popgif[1]))
-for(i in 2:timeperiod){
-  combined <- image_append(c(landgradgif[i], gradgif[i], gradvargif[i], landenvgif[i], envgif[i], envvargif[i], popgif[i]))
-  new_gif <- c(new_gif, combined)
-}
-
-new_gif
-
-
-beep(sound = 6)
-```
-
-
 
 #Sensitivity Analysis 
 Execute the simulation function over a range of values
+For now, if I want to run a single simulation I'll just run this with one line
 ```{r Sensitivity}
 #Set parameters that will be used the same in all simulations
 #Landscape Parameters
@@ -533,7 +308,7 @@ L <- 20 #Total number of Locii
 #Population growth/adaptation parameters
 phenvar <- 0.3 #Starting variance for values of each allele
 S0 <- 0.75 #Baseline survival rate, there will always be some mortality, even for the perfectly adapted
-MuOff <- 6 #Mean offspring per female per reproductive event
+MuOff <- 3 #Mean offspring per female per reproductive event
 
 #Simulation Length
 timeperiod<- 600 
@@ -561,6 +336,8 @@ RescueLength <- 3 #Number of time steps to repeat rescue over
 RescueMode <- "None" 
 RescueSourceNumber <- 5 #Number of sources to pull from if mode = "Multiple"
 
+#Run ID for the sensitivity analysis. Usually I've been using a date
+RunID <- "RescueTest2024_01_02"
 
 #Set values for parameters (migration, selection, environment type (fixed or variable))
 MigSelvals <- data.frame(Mig = rep(c(0.9, 0.99, 0.999, 0.9999, 0.99999, 1),each = 20), Sel = rep(1:10,12), Envmode = c(rep("Fixed",10), rep("Variable",10)))
@@ -568,14 +345,14 @@ MigSelvals <- data.frame(Mig = rep(c(0.9, 0.99, 0.999, 0.9999, 0.99999, 1),each 
 
 #Set up data collection
 MigSel <-array(data = NA, dim = c(6,Si,dim(MigSelvals)[1]))
-LANDrecord <- array(data = NA, dim = c(Si, 2, dim(MigSelvals)[1]))
-giflist <- vector(mode = "list", length = dim(MigSelVals[1]))
+giflist <- vector(mode = "list", length = dim(MigSelvals)[1])
+
 
 #How long does the loop take?
 start_time <- Sys.time()
 #The outer for-loop loops over different sets of parameter values, as established in MigSelvals
 for (i in 1:dim(MigSelvals)[1]) {
-  #I'm just testing this, in the line above, I'm going to have to restore the upper value of i to dim(MigSelvals)[1]
+
   #Set temporary values of variables
   Omega2grad <- MigSelvals$Sel[i]
   Omega2env <- MigSelvals$Sel[i]
@@ -604,6 +381,17 @@ for (i in 1:dim(MigSelvals)[1]) {
   POPsim[,7,] <-apply(POPsim[,10:29,], MARGIN = c(1,3), sum)
   POPsim[,8,] <- apply(POPsim[,30:49,], MARGIN = c(1,3), sum)  
 
+  ###Set contents for data collection
+
+  landgradovertime <- matrix(NA, nrow = timeperiod, ncol = Si)  
+  landenvovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
+  popovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
+  Gradovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
+  Envovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
+  Gradvarovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
+  Envvarovertime <- matrix(NA, nrow = timeperiod, ncol = Si)
+
+  
   #Simulate population and evolutionary dynamics with these parameters
   for(t in 1:timeperiod){
     #No environmental change except in this last else if statement
@@ -617,6 +405,13 @@ for (i in 1:dim(MigSelvals)[1]) {
     if(t == RescueStart) donorrecipientslist <- donorrecipients(POPsim, strategy = RescueMode)
     # Need to identify when rescues will happen
     #if(t POPS <- rescue(POPS, strategy = "Grad")
+    landgradovertime[t,] <- LAND$Grad
+    landenvovertime[t,] <- LAND$Env
+    popovertime[t,] <- colSums(!is.na(POPsim[,1,]))
+    Gradovertime[t,] <- colSums(POPsim[,7,],na.rm = TRUE)/colSums(!is.na(POPsim[,7,]), na.rm = TRUE)-LAND$Grad
+    Envovertime[t,] <- colSums(POPsim[,8,],na.rm = TRUE)/colSums(!is.na(POPsim[,8,]), na.rm = TRUE)-LAND$Env
+    Gradvarovertime[t,] <- apply(POPsim[,7,], MARGIN = 2, FUN = popvar)
+    Envvarovertime[t,] <- apply(POPsim[,8,], MARGIN = 2, FUN = popvar)
     #Cancel the remainder of the simulation if the entire metapopulation dies out
     if (sum(POPsim[,1,], na.rm = TRUE)==0) break
   }
@@ -634,99 +429,122 @@ for (i in 1:dim(MigSelvals)[1]) {
   enddata[5,] <- apply(POPsim[,8,], MARGIN = 2, FUN = popvar)
   enddata[6,] <- t
 
+  #Save full dataset
+  landgradovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Land.Grad", Value = as.vector(landgradovertime))
+  landenvovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Land.Env", Value = as.vector(landenvovertime))
+  popovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Pop.Size", Value = as.vector(popovertime))
+  gradovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Grad.Maladapt", Value = as.vector(Gradovertime))
+  envovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Env.Maladapt", Value = as.vector(Envovertime))
+  gradvarovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Grad.Var", Value = as.vector(Gradvarovertime))
+  envvarovertimedf <- data.frame(Site = rep(1:Si, each = timeperiod), Time = rep(1:timeperiod, times = Si), Variable = "Env.Var", Value = as.vector(Envvarovertime))
+  dataovertimedf <- rbind(landgradovertimedf, landenvovertimedf, popovertimedf, gradovertimedf, envovertimedf, gradvarovertimedf, envvarovertimedf)
+  #This last filter cuts the dataset off when the population goes extinct, that way the 
+
+  
   #Save information into big dataset before next step
   MigSel[,,i] <- enddata
-  LANDrecord[,,i] <- as.matrix(LAND)
-  
+  giflist[[i]] <- filter(dataovertimedf, Time <= mean(MigSel[6,,i], na.rm = TRUE))
   #Update Counter
   print(paste("Step",i,"out of",dim(MigSelvals)[1],Sys.time()))
 } 
 end_time <- Sys.time()
 end_time - start_time
-save(MigSelvals, MigSel, LANDrecord, file = "Outputs/Sensitivity/NoRescue2023_11_29a.Rdata")
+save(MigSelvals, MigSel, giflist, file = paste0("Outputs/Sensitivity/", RunID, ".Rdata"))
+
+```
+
+Simple Plots of the endpoint of each simulation
+```{simplesensitivityplots}
+  means <- apply(MigSel, MARGIN = c(1,3), FUN = mean, na.rm = TRUE)
+  popmeans <- means[1,]
+  gradmeans <- means[2,]
+  envmeans <- means[3,]
+  gradvars <- means[4,]
+  envvars <- means[5,]
+  plotdatadf <- data.frame(Mig = MigSelvals$Mig, Sel = MigSelvals$Sel, Envmode = MigSelvals$Envmode, popmeans, gradmeans, envmeans, gradvars, envvars)
+
+popmeansfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeansvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeansfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = c(-2.2, 2.2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+  
+gradmeansvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = c(-2.2, 2.2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeansfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = c(-3.2, 5.4)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeansvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = c(-3.2, 5.4)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvarsfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,0.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvarsvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,0.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvarsfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,42)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvarsvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,42)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+
+endpointsplot <- ggpubr:::ggarrange(plotlist = list(popmeansfixed, popmeansvariable, gradmeansfixed, gradmeansvariable, envmeansfixed, envmeansvariable, gradvarsfixed, gradvarsvariable, envvarsfixed, envvarsvariable), ncol = 2, nrow = 5)
+
+pdf(file = paste0("Outputs/Sensitivity/",RunID,"_EndPoint_Plots.pdf"))
+endpointsplot
+dev.off()
+```
+
+Time series plots of each population over time
+```{r }
 
 ```
 
 #Sensitivity Plots
-```{r sensitivityplots}
+Animations of of every simulation in MigSelVals
+```{r sensitivyanalysisgifs}
+gif_list_animated <- vector(mode = "list", length = dim(MigSelvals)[1])
+mp4_list_animated <- vector(mode = "list", length = dim(MigSelvals)[1])
 
-#Summarize data
+start_time <- Sys.time()
+for (j in 116:dim(MigSelvals)[1]){
+  
+  templandgrad <- ggplot(data = filter(giflist[[j]], Variable == "Land.Grad"), aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(limits = c(0,(Si+(deltaGradRate*deltaGradLength))), option = "G") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = "{closest_state}") + transition_states(Time)
+  templandgradgif <- image_read(animate(templandgrad, nframes = mean(MigSel[6,,j], na.rm = TRUE), width = 200))
 
-#Calculate means
-means <- apply(MigSel, MARGIN = c(1,3), FUN = mean, na.rm = TRUE)
-#Extant Populations Pre-Grad Change
-extantPreGC <- means[6,]>=deltaGradStart
-#Extant Populations Post-Grad Change
-extantPostGC <- means[6,]==timeperiod
-#Populations Over K*4/5
-bigpops <- colSums(MigSel[1,,]>(K*4/5))
-#Populations Over K*1/5
-notsmallpops <- colSums(MigSel[1,,]>(K/5))
-#Mean Population Size
-popmeans <- means[1,]
-#Median Population Size
-popmeds <- apply(MigSel[1,,], MARGIN = 2, FUN = median)
-#Standard Deviation of Population Size
-popsds <- apply(MigSel[1,,], MARGIN = 2, FUN = sd)
+  templandenv <- ggplot(data = filter(giflist[[j]], Variable == "Land.Env"), aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(limits = c(0,Si), option = "G") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = "{closest_state}") + transition_states(Time)
+  templandenvgif <- image_read(animate(templandenv, nframes = mean(MigSel[6,,j], na.rm = TRUE), width = 200))
 
-#Grad
+  temppop <- ggplot(data = filter(giflist[[j]], Variable == "Pop.Size"), aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(limits = c(0,K), option = "D") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = "{closest_state}") + transition_states(Time)
+temppopgif <- image_read(animate(temppop, nframes = mean(MigSel[6,,j], na.rm = TRUE), width = 200))
 
-#Mean Population level Maladaptation (Grad Phenotype - Grad)
-gradmeans <- means[2,]
-#Standard Deviation of Population level Maladaptation to Grad
-gradsds <- apply(MigSel[2,,], MARGIN = 2, FUN = sd, na.rm = TRUE)
-#Mean Population level Maladaptation (Env Phenotype - Env)
-envmeans <- means[3,]
-#Standard Deviation of Population level Maladaptation to Env
-envsds <- apply(MigSel[3,,], MARGIN = 2, FUN = sd, na.rm = TRUE)
+  tempgrad <- ggplot(data = filter(giflist[[j]], Variable == "Grad.Maladapt"), aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_continuous_divergingx(palette = 'RdBu') +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = "{closest_state}") + transition_states(Time)
+tempgradgif <- image_read(animate(tempgrad, nframes = mean(MigSel[6,,j], na.rm = TRUE), width = 200))
 
-#The mean of the within-population variance for phenotype (Grad)
-gradvars <- means[4,]
-#The standard deviation of the within-population variances for phenotype (Grad)
-gradvarssds <- apply(MigSel[4,,], MARGIN = 2, FUN = sd, na.rm = TRUE)
-#The mean of the within-population variance for phenotype (Env)
-envvars <- means[5,]
-#The standard deviation of the within-population variances for phenotype (Env)
-envvarssds <- apply(MigSel[5,,], MARGIN = 2, FUN = sd, na.rm = TRUE)
+  tempenv <- ggplot(data = filter(giflist[[j]], Variable == "Env.Maladapt"), aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_continuous_divergingx(palette = 'RdBu') +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = "{closest_state}") + transition_states(Time)
+tempenvgif <- image_read(animate(tempenv, nframes = mean(MigSel[6,,j], na.rm = TRUE), width = 200))
 
-plotdata <- data.frame(Mig = MigSelvals$Mig, Sel = MigSelvals$Sel, Envmode = MigSelvals$Envmode, extantPreGC, extantPostGC, bigpops, notsmallpops, popmeans, popmeds, popsds, gradmeans, gradsds, envmeans, envsds, gradvars, gradvarssds, envvars, envvarssds) %>% mutate(extantPreGC = as.numeric(extantPreGC), extantPostGC = as.numeric(extantPostGC))
+  tempgradvar <- ggplot(data = filter(giflist[[j]], Variable == "Grad.Var"), aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(option = "B") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = "{closest_state}") + transition_states(Time)
+tempgradvargif <- image_read(animate(tempgradvar, nframes = mean(MigSel[6,,j], na.rm = TRUE), width = 200))
+ 
+  tempenvvar <- ggplot(data = filter(giflist[[j]], Variable == "Env.Var"), aes(x = Variable, y = Site)) + geom_raster(aes(fill = Value)) + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(option = "B") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = "{closest_state}") + transition_states(Time)
+tempenvvargif <- image_read(animate(tempenvvar, nframes = mean(MigSel[6,,j], na.rm = TRUE), width = 200))
 
-plotdatalong <- plotdata %>% pivot_longer(cols = 4:18, names_to = "Response", values_to = "Value")
 
-ggplot(data = plotdatalong, aes(x = Mig, y = Sel)) + facet_grid(rows = vars(Response), cols = vars(Envmode)) + geom_raster(aes(fill = Value)) + scale_fill_viridis() + theme_classic()
-
-popplotdatalong <- plotdatalong %>% filter(Response %in% names(plotdata)[4:10]) %>% droplevels()
-adaptplotdatalong <- plotdatalong %>% filter(Response %in% names(plotdata[11:18])) %>% droplevels()
-
-ggplot(data = popplotdatalong, aes(x = Mig, y = Sel)) + facet_grid(rows = vars(Response), cols = vars(Envmode)) + geom_raster(aes(fill = Value)) + scale_fill_viridis() + theme_classic()
-
-ggplot(data = adaptplotdatalong, aes(x = Mig, y = Sel)) + facet_grid(rows = vars(Response), cols = vars(Envmode)) + geom_raster(aes(fill = Value)) + scale_fill_viridis() + theme_classic()
-
-#Test Plot
-ggplot(data = filter(plotdata, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis() + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion of Migrants") + ylab("Selection Strength") + theme_classic()
-
-plotlistfixed <-vector(mode = "list", length = 15)
-plotlistvariable <-vector(mode = "list", length = 15)
-for(i in names(plotdata)[4:18]){
-  plotlistfixed[[i]] <- local({
-        i <- i
-        ggplot(data = filter(plotdata, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = .data[[i]])) + scale_fill_viridis() + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
-        })
-  plotlistvariable[[(i)]] <- local({
-        i <- i
-        ggplot(data = filter(plotdata, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = .data[[i]])) + scale_fill_viridis() + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
-  })
+  tempnewgif <- image_append(c(temppopgif[1], templandgradgif[1], tempgradgif[1], tempgradvargif[1], templandenvgif[1], tempenvgif[1], tempenvvargif[1]))
+  for(k in 2:mean(MigSel[6,,j], na.rm = TRUE)){
+    tempcombined <- image_append(c(temppopgif[k], templandgradgif[k], tempgradgif[k], tempgradvargif[k], templandenvgif[k], tempenvgif[k], tempenvvargif[k]))
+    tempnewgif <- c(tempnewgif, tempcombined)
   }
+  gif_list_animated[[j]] <- tempnewgif
+  image_write_gif(tempnewgif, path = paste0("Outputs/Sensitivity/GIFs/",RunID,"Mig", MigSelvals[j,1],"Sel", MigSelvals[j,2],MigSelvals[j,3],".gif"))
 
+  temp_new_mp4 <- image_convert(tempnewgif, "mp4")
+  temp_new_mp4%>%image_write_video(path = paste0("Outputs/Sensitivity/mp4s/",RunID,"Mig", MigSelvals[j,1],"Sel", MigSelvals[j,2],MigSelvals[j,3],".mp4"))
+  mp4_list_animated[[j]] <- temp_new_mp4
+  
+  print(paste("Animating Step",j,"out of",length(gif_list_animated),Sys.time()))
+  }
+save(gif_list_animated, mp4_list_animated, file = paste0("Outputs/Sensitivity/", RunID, "Animations.Rdata"))
+end_time <- Sys.time()
+end_time - start_time
 
-pdf(file = "Outputs/Sensitivity/NoRescue2023_11_29a_Plots_Fixed.pdf", height = 10, width = 7.5)
-ggpubr::ggarrange(plotlist = plotlistfixed, ncol = 2, nrow = 6, byrow = FALSE)
-dev.off()
-
-
-pdf(file = "Outputs/Sensitivity/NoRescue2023_11_29a_Plots_Variable.pdf", height = 10, width = 7.5)
-ggpubr::ggarrange(plotlist = plotlistvariable, ncol = 2, nrow = 6, byrow = FALSE)
-dev.off()
 
 
 ```
