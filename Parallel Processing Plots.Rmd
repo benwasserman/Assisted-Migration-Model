@@ -1,0 +1,146 @@
+---
+title: "Parallel Processing Plots"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(ggpubr)
+library(colorspace)
+library(grid)
+library(gdata)
+library(str2str)
+```
+
+```{r loaddata}
+load("Outputs/Parallel/2024_01_24_Test_Outputs.Rdata")
+```
+
+```{r organizedata}
+
+
+#This gets us a 3d array with all of the outputs
+datalist <- lapply(results_mclapply, FUN = "[[", 1)
+dataarray <- ld2a(datalist)
+
+landlist <-lapply(results_mclapply, FUN = "[[", 2)
+landarray <- ld2a(landlist)
+
+#This is the final landscape value for for each site
+landgradmatfinal <- landarray[,1,]+matrix(Paramdf$deltaGradLength*Paramdf$deltaGradRate, byrow = TRUE, nrow = mean(Paramdf$Si), ncol = dim(Paramdf)[1])
+landenvmatfinal <- landarray[,1,]+matrix(Paramdf$deltaGradLength*Paramdf$deltaGradRate, byrow = TRUE, nrow = mean(Paramdf$Si), ncol = dim(Paramdf)[1])
+
+#Get the values at the endpoint
+poplist <- lapply(datalist, FUN = filter, ((Variable == "Pop.Size") & (Time == 600))) 
+gradlist <- lapply(datalist, FUN = filter, ((Variable == "Grad") & (Time == 600))) 
+envlist <- lapply(datalist, FUN = filter, ((Variable == "Env") & (Time == 600)))
+gradvarlist <- lapply(datalist, FUN = filter, ((Variable == "Grad.Var") & (Time == 600)))
+envvarlist <- lapply(datalist, FUN = filter, ((Variable == "Env.Var") & (Time == 600)))
+
+#Find differential from optimum
+
+#Find phenotypes
+Gradmatfinal <- simplify2array(sapply(gradlist, "[", 4, simplify = "array"))
+#Find differential
+Graddiff <- Gradmatfinal - landgradmatfinal
+#Identify extinct simulations
+extinctGrad <- colMeans(is.na(Graddiff))==50
+#Average phenotype-landscape mismatch
+Graddiffmeans <- colMeans(Graddiff, na.rm = TRUE)
+Graddiffmeans[colMeans(is.na(Graddiff))==50] <- NA
+Paramdf$Maladapt.Grad <- Graddiffmeans
+
+#Need to replicate the above for ENVmatch
+
+Envmatfinal <- simplify2array(sapply(envlist, "[", 4, simplify = "array"))
+Envdiff <- Envmatfinal - landenvmatfinal
+#Identify extinct simulations
+extinctEnv <- colMeans(is.na(Envdiff))==50
+Envdiffmeans <- colMeans(Envdiff, na.rm = TRUE)
+Envdiffmeans[colMeans(is.na(Envdiff))==50] <- NA
+Paramdf$Maladapt.Env <- Envdiffmeans
+
+
+#Add additional means to full dataset
+Paramdf$PopSizeFinal <- sapply(poplist, function(x) mean(x$Value))
+Paramdf$GradVarFinal <- sapply(gradvarlist, function(x) mean(x$Value, na.rm = TRUE))
+Paramdf$EnvVarFinal <- sapply(envvarlist, function(x) mean(x$Value, na.rm = TRUE))
+
+
+```
+
+No Rescue Plots
+```{r plots}
+
+#Find the right ranges for each plot type
+  #Set ranges for plots
+  tempmaladaptrange <- range(filter(Paramdf, RescueMode == "None")$Maladapt.Grad, na.rm = TRUE)
+  tempmaladaptrangeround <- c(round(tempmaladaptrange[1], digits = 1)-0.1, round(tempmaladaptrange[2], digits = 1)+0.1)
+    envmaladaptrange <- range(filter(Paramdf, RescueMode == "None")$Maladapt.Env, na.rm = TRUE)
+  envmaladaptrangeround <- c(round(envmaladaptrange[1], digits = 1)-0.1, round(envmaladaptrange[2], digits = 1)+0.1)
+
+  
+  gradvarmax <- ceiling(max(filter(Paramdf, RescueMode == "None")$GradVarFinal, na.rm = TRUE))
+  envvarmax <- ceiling(max(filter(Paramdf, RescueMode == "None")$EnvVarFinal, na.rm = TRUE))
+  
+  spacer <- rep(20,4)
+
+  #Ending Population Size
+popmeansfixed <- ggplot(data = filter(Paramdf, ((EnvType == "Fixed") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = PopSizeFinal)) + scale_fill_viridis(limits = c(0,500), name = "Population\nMeans") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+popmeansvariable <- ggplot(data = filter(Paramdf, ((EnvType == "Variable") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = PopSizeFinal)) + scale_fill_viridis(limits = c(0,500), name = "Population\nMeans") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+#Ending Grad Maladaptation 
+gradmeansfixed <- ggplot(data = filter(Paramdf, ((EnvType == "Fixed") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = Maladapt.Grad)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = tempmaladaptrangeround, name = "Temperature\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+gradmeansvariable <- ggplot(data = filter(Paramdf, ((EnvType == "Variable") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = Maladapt.Grad)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = tempmaladaptrangeround, name = "Temperature\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+#Ending Env Maladaptation 
+envmeansfixed <- ggplot(data = filter(Paramdf, ((EnvType == "Fixed") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = Maladapt.Env)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = envmaladaptrangeround, name = "Environment\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+envmeansvariable <- ggplot(data = filter(Paramdf, ((EnvType == "Variable") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = Maladapt.Env)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = envmaladaptrangeround, name = "Environment\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+
+#Ending Phenoytpic Variance for Grad
+gradvarsfixed <- ggplot(data = filter(Paramdf, ((EnvType == "Fixed") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = GradVarFinal)) + scale_fill_viridis(limits = c(0,gradvarmax), option = "A") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+gradvarsvariable <- ggplot(data = filter(Paramdf, ((EnvType == "Variable") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = GradVarFinal)) + scale_fill_viridis(limits = c(0,gradvarmax), option = "A") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+#Ending Phenotypic Variance For Env
+envvarsfixed <- ggplot(data = filter(Paramdf, ((EnvType == "Variable") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = EnvVarFinal)) + scale_fill_viridis(limits = c(0,envvarmax), option = "A") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+envvarsvariable <- ggplot(data = filter(Paramdf, ((EnvType == "Variable") & (RescueMode == "None"))), aes(x = (Mig+0.000001), y = (Omega2grad))) + geom_tile(aes(fill = EnvVarFinal)) + scale_fill_viridis(limits = c(0,envvarmax), option = "A") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + scale_y_reverse(breaks = seq(10:1), labels = as.character(seq(10,1))) + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+ggarrange(popmeansfixed, popmeansvariable)
+ggarrange(gradmeansfixed, gradmeansvariable)
+ggarrange(envmeansfixed, envmeansvariable)
+ggarrange(gradvarsfixed, gradvarsvariable)
+ggarrange(envvarsfixed, envvarsvariable)
+
+
+plotpops <- ggarrange(plotlist = list(popmeansfixed, popmeansvariable), ncol = 2, common.legend = TRUE, legend = "right")
+plotgrad <- ggarrange(plotlist = list(gradmeansfixed, gradmeansvariable), ncol = 2, common.legend = TRUE, legend = "right")
+plotenv <- ggarrange(plotlist = list(envmeansfixed, envmeansvariable), ncol = 2, common.legend = TRUE, legend = "right")
+plotgradvar <- ggarrange(plotlist = list(gradvarsfixed, gradvarsvariable), ncol = 2, common.legend = TRUE, legend = "right")
+plotenvvar <- ggarrange(plotlist = list(envvarsfixed, envvarsvariable), ncol = 2, common.legend = TRUE, legend = "right")
+
+totalplot <- ggarrange(plotlist = list(plotpops, plotgrad, plotenv, plotgradvar, plotenvvar), ncol = 1)
+totalplot2 <- annotate_figure(totalplot, left = textGrob("Selection Strength (1/Omega^2)", rot = 90, vjust = 1, gp = gpar(cex = 3)), bottom = textGrob("Proportion Migrants", vjust = -0.25, gp = gpar(cex = 3)), top = textGrob("Fixed Environment               Variable Environment       ", gp = gpar(cex = 3)))
+
+pdf(file = paste0("Outputs/Parallel/",Paramdf$RunID[[1]], "_NoRescuePlots.pdf"), height = 12, width = 24)
+totalplot2
+dev.off()
+
+```
+
+Compare Rescue Methods
+```{r rescueplots}
+
+```
+
