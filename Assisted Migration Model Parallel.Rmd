@@ -19,6 +19,8 @@ library(doParallel)
 library(parallel)
 library(gdata)
 library(beepr)
+library(FNN)
+library(purrr)
 ```
 
 
@@ -46,17 +48,36 @@ library(beepr)
 #RescueSites - what proportion of sites to rescue (The lowest RescueSites will be targeted for supplemental gene flow)
 #RescueSize - number of individuals to send to each rescuesite each year
 #RescueLength - number of time steps to repeat rescue over
-#RescueMode - source population selection, options below:
+#RescueModes - a list of source population selection strategies that will all be tested on each simulated population/landscape
 #Demographic:  rescue from the geographically closest single population
 #Grad: rescue based on the closest population to the ending value of Grad
 #GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
 #Multiple: rescue based on a mix of 5 local populations, not based on Grad or Env
-#Note that, when I move towards the paired tests, we will actually run each population, then split it and have all rescue scenarios run.
+#Note that when multiple is used as an option, it should be used the last in the list of options
 #RescueSourceNumber - Number of sources to pull from if mode = "Multiple"
-
+#Replicates - how many copies of each parameter set are we going to simulate
+Replicates <- 1
 
 #Set values for all possible combinations of the input variables
-Paramdf <- expand.grid(RunID = "2024_01_24_Test", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueMode = c("None", "Demographic", "Grad", "GradEnv"))
+Paramdfsingle <- expand.grid(RunID = "B_2024_03_20", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Multiple")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
+#Test by removing one mode at a time to see if one particular mode stops things
+#c("None", "Demographic", "Grad", "GradEnv", "Multiple")
+#leaving out None threw no errors
+#leaving out Demographic threw: "Error in POPsim2[, , , rt] <- rescue(p = POPsim2[, , , rt], donorcplist = #donorrecipientslist[,  : \n  number o"| __truncated__
+#  ..- attr(*, "condition")=List of 2
+#  .. ..$ message: chr "number of items to replace is not a multiple of replacement length"
+#levaing out Grad throws the same error
+#leaving out GradEnv throws the same error
+#leaving out Multiple led to a bunch of errors 
+#row31: 'try-error' chr "Error in dimnames(x) <- dn : \n  length of 'dimnames' [2] not equal to array extent\n"
+#$ message: chr "length of 'dimnames' [2] not equal to array extent"
+#$ row31: 'try-error' chr "Error in POPsim2[, , , rt] <- rescue(p = POPsim2[, , , rt], donorcplist = donorrecipientslis
+#  .. ..$ message: chr "number of items to replace is not a multiple of replacement length"
+#$ row31: 'try-error' chr "Error in dimnames(x) <- dn : \n  length of 'dimnames' [2] not equal to array extent\n"
+
+Paramdf <- do.call("rbind", replicate( 
+  Replicates, Paramdfsingle, simplify = FALSE))
+
 
 #Set composite variables
 Paramdf <- mutate(Paramdf, Omega2grad = 1/Sel, Omega2env = 1/Sel, MuMovement = 1-Mig, NumRescueSites = floor(Si*RescueSites))
@@ -326,10 +347,11 @@ return(u)
 
 #2024/01/27 I changed parameter q to q2 because I was wondering if the alias of quit: q was causing problems, but I actually think it was one place where I was calling POPsim by mistake where I should've been calling q
 
-donorrecipientsbase <- function(q2, strategy, NumRescueSites, LANDfuture, LANDstarting){
+donorrecipientsbase <- function(q2, strategies, NumRescueSites, LANDfuture, LANDstarting, NumRescueSources){
   
+  #Note strategies is a list of names of different strategies
   
-  #if(strategy == "None") return(matrix(NA_integer_, ncol = 2))
+
   #Now identify populations in need
   #First sort the populations by size
   popsizes <- colSums(!is.na(q2[,1,]))
@@ -349,40 +371,77 @@ donorrecipientsbase <- function(q2, strategy, NumRescueSites, LANDfuture, LANDst
   eligibledonors <- eligibledonors[which(!(eligibledonors %in% recipients))]
   
   #setup donor recipient matrix
-  drmat <- matrix(NA_integer_, ncol = 2, nrow = length(recipients)) #this assumes 1 row per recipient, we'll resave the empty matrix if strategy = "multiple"
-  drmat[,2] <- recipients
-    if(strategy == "None") {
-      #this will return just the identities of hypothetical recipients, which can be useful for comparisons later.
-    } else if (strategy == "Demographic") {
+  #set it up as a named data frame
 
-      #Find all indices of eligible donors that equal the minimum distance, and randomly sample amongst them, such that there is no bias note, note that max.col could pick always the one to the north or south of the focal location if desired. There is no min.col, so we needed to use the max.col of the inverse to achieve the random tie breaking method
-      drmat[,1] <- sapply(t(drmat[,2]), function(a, b) {b[max.col(matrix((1/abs(a-b)), nrow =1))]}, eligibledonors)
-    } else if (strategy == "Grad") {
-        drmat[,1] <- sapply(t(drmat[,2]), function(a, b,c, d) {b[max.col(matrix((1/abs(c$Grad[a]-d$Grad[b])), nrow =1))]}, b = eligibledonors, c = LANDfuture, d = LANDstarting)
-    } else if (strategy == "GradEnv") {
-        drmat[,1] <- sapply(t(drmat[,2]), function(a, b,c, d) {b[max.col(matrix(1/(as.matrix(dist(rbind(c[a,], d[b,])))[-1,1]), nrow = 1))]}, b = eligibledonors, c = LANDfuture, d = LANDstarting)
+  drmat <- matrix(NA_integer_, ncol = 1+length(strategies[[1]])+sum(strategies[[1]]=="Multiple")*(NumRescueSources-1), nrow = length(recipients)) #this assumes 1 row per recipient, we'll resave the empty matrix if strategy = "multiple"
+  drmat[,1] <- recipients
+  colnames(drmat) <- rep(NA, ncol(drmat))
+  colnames(drmat)[1] <- "Recipients"
+  
+  for (qi in 1:length(strategies[[1]])){
+    if(strategies[[1]][qi] == "None") {
+       #we will leave this donor column as NAs
+       colnames(drmat)[1+qi] <- strategies[[1]][qi]
+    } else if (strategies[[1]][qi] == "Demographic") {
+
+      #Find all indices of eligible donors that equal the minimum distance, and randomly sample amongst them, such that there is no bias, note that max.col could pick always the one to the north or south of the focal location if desired. There is no min.col, so we needed to use the max.col of the inverse to achieve the random tie breaking method
+        drmat[,1+qi] <- sapply(t(drmat[,1]), function(a, b) {b[max.col(matrix((1/abs(a-b)), nrow =1))]}, eligibledonors)
+        colnames(drmat)[1+qi] <- strategies[[1]][qi]
+    } else if (strategies[[1]][qi] == "Grad") {
+        drmat[,1+qi] <- sapply(t(drmat[,1]), function(a, b,c, d) {b[max.col(matrix((1/abs(c$Grad[a]-d$Grad[b])), nrow =1))]}, b = eligibledonors, c = LANDfuture, d = LANDstarting)
+        colnames(drmat)[1+qi] <- strategies[[1]][qi]
+    } else if (strategies[[1]][qi] == "GradEnv") {
+        drmat[,1+qi] <- sapply(t(drmat[,1]), function(a, b,c, d) {b[max.col(matrix(1/(as.matrix(dist(rbind(c[a,], d[b,])))[-1,1]), nrow = 1))]}, b = eligibledonors, c = LANDfuture, d = LANDstarting)
+        colnames(drmat)[1+qi] <- strategies[[1]][qi]
+    } else if (strategies[[1]][qi] == "Multiple") {
+        drmat[,(1+qi):dim(drmat)[2]] <- matrix(eligibledonors[knnx.index(eligibledonors, drmat[,1], k = min(NumRescueSources, length(eligibledonors), na.rm = TRUE))], nrow = nrow(drmat), ncol = NumRescueSources, byrow = FALSE)
+        colnames(drmat)[(1+qi):dim(drmat)[2]] <- rep(strategies[[1]][[qi]], NumRescueSources)
+    }
+      
+       
   }
   return(drmat)  
 }
 
-rescuebase <- function(p, donorcplist, K, strategy, RescueSize, NumRescueSites, L, funct2){
-    #First, do each of the donor populations require all RescueSize individuals, or are there not enough spots?
-  popsizes <- colSums(!is.na(p[,1,]))
-  recipientpopsizes <- popsizes[donorcplist[,2]]
-  recipientopportunities <- pmin(rep(RescueSize,NumRescueSites),(K-popsizes[donorcplist[,2]]))
+rescuebase <- function(p, donorcplist, K, strategy, RescueSize, NumRescueSites, L, funct2, NumRescueSources){
+  #First condense the multiple column donorcplist into a long format   
+  if (strategy == "Multiple") {
+    donorcplist2 <- matrix(NA, nrow = nrow(donorcplist)*(ncol(donorcplist)-1), ncol = 2)
+    donorcplist2[,1] <- rep(donorcplist[,1], each = (ncol(donorcplist)-1))
+    donorcplist2[,2] <- as.vector(t(donorcplist[,2:ncol(donorcplist)]))
+    donorcplist <- donorcplist2
+  }
   
-  #If there are no donors, or there are no spots to fill, we just skip to the end and return p
+  #Second, do each of the donor populations require all RescueSize individuals, or are there not enough spots?
+  popsizes <- colSums(!is.na(p[,1,]))
+  recipientpopsizes <- popsizes[donorcplist[,1]]
+  recipientopportunities <- pmin(rep(RescueSize,NumRescueSites),(K-popsizes[donorcplist[,1]]))
+  donorsizes <- popsizes[donorcplist[,2]]
+  #donoropportunities
+  
+  #If the strategy is none, then don't change p
   if (strategy == "None") {
-    
+  #if there are no open spots, then don't change p  
   } else if (sum(recipientopportunities, na.rm = TRUE) == 0) {
-    
+  
+  #if there are no offspring produced by the donor populations, then don't change p  
+  } else if (sum(p[,6,donorcplist[,2]], na.rm = TRUE) == 0) {
+  
+  #otherwise, here's now to change p
   } else {
   
-  
   #Generate new offspring matrix
-  offspringmoved <- matrix(NA, nrow = sum(recipientopportunities, na.rm = TRUE), ncol = 11+2*L)
-  offspringmoved[,1] <- rep(donorcplist[,1], times = recipientopportunities)
-  offspringmoved[,2] <- rep(donorcplist[,2], times = recipientopportunities)
+  #changing times = floor(recipientopportunities/NumRescueSources) should a) keep the total number of 
+  
+  if(strategy == "Multiple"){
+    offspringmoved <- matrix(NA, nrow = sum(floor(recipientopportunities/NumRescueSources)), ncol = 11+2*L)
+    offspringmoved[,1] <- rep(donorcplist[,2], times = floor(recipientopportunities/NumRescueSources))
+    offspringmoved[,2] <- rep(donorcplist[,1], times = floor(recipientopportunities/NumRescueSources))
+  } else {
+    offspringmoved <- matrix(NA, nrow = sum(recipientopportunities, na.rm = TRUE), ncol = 11+2*L)
+    offspringmoved[,1] <- rep(donorcplist[,2], times = recipientopportunities)
+    offspringmoved[,2] <- rep(donorcplist[,1], times = recipientopportunities)
+  }
   offspringmoved[,3] <- sample(c(0,1), size = nrow(offspringmoved), replace = TRUE)
   
 
@@ -395,7 +454,10 @@ rescuebase <- function(p, donorcplist, K, strategy, RescueSize, NumRescueSites, 
     tempmomsweight <- tempmoms[tempmomsind,6]
     tempdads <- tempmoms[tempmomsind,5]
     tempparents <- cbind(tempmomsind, tempdads)
-    offspringmoved[transplant,4:5] <- tempparents[sample(nrow(tempparents),size=1,replace=TRUE, prob = tempmomsweight),]
+    if(nrow(tempparents) == 0) {
+    } else {
+    offspringmoved[transplant,4:5] <- tempparents[resample(nrow(tempparents),size=1,replace=TRUE, prob = tempmomsweight),]
+    #}
   }
   #Identify the parental genotypes
   momsmovers <- matrix(data = NA_real_, nrow = nrow(offspringmoved), ncol = 2*L)
@@ -458,15 +520,15 @@ rescuebase <- function(p, donorcplist, K, strategy, RescueSize, NumRescueSites, 
     
       rowsneededmove <- as.vector(unlist(apply(cbind(recipientpopsizes+1, recipientpopsizes+recipientopportunities), MARGIN = 1,  Kbase = K, FUN = funct2, simplify = TRUE)))
       rowsneededmove <- rowsneededmove[which(!is.na(rowsneededmove))]
-      p[cbind(rep(rowsneededmove, each = dim(p)[2]), 1:dim(p)[2], rep(donorcplist[,2], times = recipientopportunities*dim(p)[2]))]<-as.vector(t(offspringmoved[,3:(11+2*L)]))
+      p[cbind(rep(rowsneededmove, each = dim(p)[2]), 1:dim(p)[2], rep(donorcplist[,1], times = recipientopportunities*dim(p)[2]))]<-as.vector(t(offspringmoved[,3:(11+2*L)]))
     
        
       
     
-}
+  }
+  }
       return(p)
 }
-
 
 #calculate population variance
 popvarbase <- function(o){
@@ -523,16 +585,20 @@ simfunc <- function(PSL, phenotypes = phenotypesbase, death = deathbase, matecho
 
   ###Set contents for data collection
 
-  #landgradovertime <- matrix(NA, nrow = PSL$timeperiod, ncol = PSL$Si)  
-  #landenvovertime <- matrix(NA, nrow = PSL$timeperiod, ncol = PSL$Si)
-  popovertime <- matrix(NA, nrow = PSL$timeperiod, ncol = PSL$Si)
-  Gradovertime <- matrix(NA, nrow = PSL$timeperiod, ncol = PSL$Si)
-  Envovertime <- matrix(NA, nrow = PSL$timeperiod, ncol = PSL$Si)
-  Gradvarovertime <- matrix(NA, nrow = PSL$timeperiod, ncol = PSL$Si)
-  Envvarovertime <- matrix(NA, nrow = PSL$timeperiod, ncol = PSL$Si)
+  #Last time point before the functions split
+  firstsesh <- min(PSL$timeperiod, (PSL$RescueStart), na.rm = TRUE)
+
+  
+  popovertime <- matrix(NA, nrow = firstsesh, ncol = PSL$Si)
+  Gradovertime <- matrix(NA, nrow = firstsesh, ncol = PSL$Si)
+  Envovertime <- matrix(NA, nrow = firstsesh, ncol = PSL$Si)
+  Gradvarovertime <- matrix(NA, nrow = firstsesh, ncol = PSL$Si)
+  Envvarovertime <- matrix(NA, nrow = firstsesh, ncol = PSL$Si)
+  
+  
   
     #Simulate population and evolutionary dynamics with these parameters
-  for (t in 1:PSL$timeperiod) {
+  for (t in 1:firstsesh) {
     #No environmental change except in this last else if statement
     if (t< PSL$deltaGradStart) {
     } else if (t >= (PSL$deltaGradStart + PSL$deltaGradLength)) {
@@ -542,10 +608,7 @@ simfunc <- function(PSL, phenotypes = phenotypesbase, death = deathbase, matecho
     POPsim <- matechoice(v2 = POPsim, MuOff = PSL$MuOff)
     POPsim <- reproducedisperse(u = POPsim, L = PSL$L, Si = PSL$Si, K = PSL$K, MuMovement = PSL$MuMovement, funct2 = funct)
     POPsim <- phenotypes(z = POPsim)
-    #Check if it is time for rescue & implement
-    if (t == PSL$RescueStart) {donorrecipientslist <- donorrecipients(q2 = POPsim, 
-      strategy = PSL$RescueMode, NumRescueSites = PSL$NumRescueSites, LANDfuture = LANDsimfuture, LANDstarting = LANDsimstarting)}
-    if ((t >= PSL$RescueStart) & (t < PSL$RescueStart + PSL$RescueLength)) {POPsim <- rescue(p = POPsim, donorcplist = donorrecipientslist, K = PSL$K, strategy = PSL$RescueMode, RescueSize = PSL$RescueSize, NumRescueSites = PSL$NumRescueSites, L = PSL$L, funct2 = funct)}
+
     
     #Report out some data at the end of this timestep
     popovertime[t,] <- colSums(!is.na(POPsim[,1,]))
@@ -557,21 +620,101 @@ simfunc <- function(PSL, phenotypes = phenotypesbase, death = deathbase, matecho
     #Cancel the remainder of the simulation if the entire metapopulation dies out
     if (sum(POPsim[,1,], na.rm = TRUE)==0) break
   }
-  #Save full dataset
+  
+  
+  #Save full pre-rescue dataset
+  popovertimedf <- data.frame(Rescue = "PreRescue", Site = rep(1:PSL$Si, each = firstsesh), Time = rep(1:firstsesh, times = PSL$Si), Variable = "Pop.Size", Value = as.vector(popovertime))
+  gradovertimedf <- data.frame(Rescue = "PreRescue", Site = rep(1:PSL$Si, each = firstsesh), Time = rep(1:firstsesh, times = PSL$Si), Variable = "Grad", Value = as.vector(Gradovertime))
+  envovertimedf <- data.frame(Rescue = "PreRescue", Site = rep(1:PSL$Si, each = firstsesh), Time = rep(1:firstsesh, times = PSL$Si), Variable = "Env", Value = as.vector(Envovertime))
+  gradvarovertimedf <- data.frame(Rescue = "PreRescue", Site = rep(1:PSL$Si, each = firstsesh), Time = rep(1:firstsesh, times = PSL$Si), Variable = "Grad.Var", Value = as.vector(Gradvarovertime))
+  envvarovertimedf <- data.frame(Rescue = "PreRescue", Site = rep(1:PSL$Si, each = firstsesh), Time = rep(1:firstsesh, times = PSL$Si), Variable = "Env.Var", Value = as.vector(Envvarovertime))
+ dataovertimedf <- rbind(popovertimedf, gradovertimedf, envovertimedf, gradvarovertimedf, envvarovertimedf)
+  
+if (sum(POPsim[,1,], na.rm = TRUE)!=0){  
+#Now outside of either of the two loops (first sesh and second sesh, I'll pick the rescue)
+  donorrecipientslist <- donorrecipients(q2 = POPsim, strategies = PSL$RescueModes, NumRescueSites = PSL$NumRescueSites, LANDfuture = LANDsimfuture, LANDstarting = LANDsimstarting, NumRescueSources = PSL$RescueSourceNumber)
+  #Create a 4 dimensional object - POPsim2, populate it with length(PSL$RescueModes) number of copies of POPsim
+    POPsim2 <- array(dim = c(PSL$K,9+2*PSL$L, PSL$Si, length(PSL$RescueModes[[1]])))
+    POPsim2 <- simplify2array(apply(POPsim2, MARGIN = 4, FUN = function(x) {x = POPsim}, simplify = FALSE))
 
+  
+  #How long is the second session?
+  secondsesh<- 1+PSL$timeperiod-PSL$RescueStart
+  
+  #Create a 3d object equivalents of popovertime, Gradovertime etc  
+  popovertime2 <- array(dim = c(secondsesh, PSL$Si, length(PSL$RescueModes[[1]])))
+  Gradovertime2 <- array(dim = c(secondsesh, PSL$Si, length(PSL$RescueModes[[1]])))
+  Envovertime2 <- array(dim = c(secondsesh, PSL$Si, length(PSL$RescueModes[[1]])))
+  Gradvarovertime2 <- array(dim = c(secondsesh, PSL$Si, length(PSL$RescueModes[[1]])))
+  Envvarovertime2 <- array(dim = c(secondsesh, PSL$Si, length(PSL$RescueModes[[1]])))
+  
+  #Apply rescue function over all the options in PSL$RescueModes and calculate their phenotypes
+  for (rt in 1:length(PSL$RescueModes[[1]])) {
+    testnames <- colnames(donorrecipientslist) %in% c("Recipients", PSL$RescueModes[[1]][rt])
+    POPsim2[,,,rt] <- rescue(p = POPsim2[,,,rt], donorcplist = donorrecipientslist[, testnames, drop = FALSE], K = PSL$K, strategy = PSL$RescueModes[[1]][rt], RescueSize = PSL$RescueSize, NumRescueSites = PSL$NumRescueSites, L = PSL$L, funct2 = funct, NumRescueSources = PSL$RescueSourceNumber)
+   
+  #Calculate the phenotypes of the donated individuals
+    POPsim2[,,,rt] <-phenotypes(POPsim2[,,,rt])
+     
+  #function(p, donorcplist, K, strategy, RescueSize, NumRescueSites, L, funct2, NumRescueSources)  
     
-  popovertimedf <- data.frame(Site = rep(1:PSL$Si, each = PSL$timeperiod), Time = rep(1:PSL$timeperiod, times = PSL$Si), Variable = "Pop.Size", Value = as.vector(popovertime))
-  gradovertimedf <- data.frame(Site = rep(1:PSL$Si, each = PSL$timeperiod), Time = rep(1:PSL$timeperiod, times = PSL$Si), Variable = "Grad", Value = as.vector(Gradovertime))
-  envovertimedf <- data.frame(Site = rep(1:PSL$Si, each = PSL$timeperiod), Time = rep(1:PSL$timeperiod, times = PSL$Si), Variable = "Env", Value = as.vector(Envovertime))
-  gradvarovertimedf <- data.frame(Site = rep(1:PSL$Si, each = PSL$timeperiod), Time = rep(1:PSL$timeperiod, times = PSL$Si), Variable = "Grad.Var", Value = as.vector(Gradvarovertime))
-  envvarovertimedf <- data.frame(Site = rep(1:PSL$Si, each = PSL$timeperiod), Time = rep(1:PSL$timeperiod, times = PSL$Si), Variable = "Env.Var", Value = as.vector(Envvarovertime))
-  dataovertimedf <- rbind(popovertimedf, gradovertimedf, envovertimedf, gradvarovertimedf, envvarovertimedf)
+  }
+  
+  #Save the post-rescue data
+  popovertime2[1,,]  <- colSums(!is.na(POPsim2[,1,,]))
+  Gradovertime2[1,,] <- apply(POPsim2[,7,,], MARGIN = 3, FUN = colSums, na.rm = TRUE, simplify = TRUE)/apply(POPsim2[,7,,], MARGIN = 3, FUN = function(x) colSums(!is.na(x), na.rm = TRUE), simplify = TRUE)
+  Envovertime2[1,,] <- apply(POPsim2[,8,,], MARGIN = 3, FUN = colSums, na.rm = TRUE, simplify = TRUE)/apply(POPsim2[,8,,], MARGIN = 3, FUN = function(x) colSums(!is.na(x), na.rm = TRUE), simplify = TRUE)  
+  Gradvarovertime2[1,,] <- apply(POPsim2[,7,,], MARGIN = c(2,3), FUN = popvar) 
+  Envvarovertime2[1,,] <- apply(POPsim2[,8,,], MARGIN = c(2,3), FUN = popvar)  
 
-  #Check is donorrecipientslist exists, if not (for example, because the population went extinct before RescueStart), create a null
-  if (exists("donorrecipientslist") == F) {
-    donorrecipientslist <- matrix(NA_integer_, ncol = 2, nrow = PSL$NumRescueSites)
+  
+  #Setup LANDsim2 
+  LANDsim2 <- LANDsim
+  #Start the second session loop
+
+  for (t2 in (PSL$RescueStart+1):PSL$timeperiod){
+    
+    #No environmental change except in this last else if statement
+    if (t< PSL$deltaGradStart) {
+    } else if (t >= (PSL$deltaGradStart + PSL$deltaGradLength)) {
+    } else {LANDsim2$Grad <- LANDsim2$Grad + PSL$deltaGradRate}
+  
+ 
+    #Population process, death, matechoice, reproduce, disperse, calculate phenotypes for new individuals. Need to apply across 4th dimension of POPsim2
+    POPsim2 <- simplify2array(apply(POPsim2, MARGIN = 4, FUN = death, K = PSL$K, Omega2grad = PSL$Omega2grad, Omega2env = PSL$Omega2env, S0 = PSL$S0, LAND = LANDsim2, simplify = FALSE))
+    POPsim2 <- simplify2array(apply(POPsim2, MARGIN = 4, FUN = matechoice, MuOff = PSL$MuOff, simplify = FALSE))
+    POPsim2 <- simplify2array(apply(POPsim2, MARGIN = 4, FUN = reproducedisperse, L = PSL$L, Si = PSL$Si, K = PSL$K, MuMovement = PSL$MuMovement, funct2 = funct, simplify = FALSE))
+    POPsim2 <- simplify2array(apply(POPsim2, MARGIN = 4, FUN = phenotypes, simplify = FALSE))      
+    
+      #Save the post-rescue data
+    popovertime2[(t2-PSL$RescueStart+1),,]  <- colSums(!is.na(POPsim2[,1,,]))
+    Gradovertime2[(t2-PSL$RescueStart+1),,] <- apply(POPsim2[,7,,], MARGIN = 3, FUN = colSums, na.rm = TRUE, simplify = TRUE)/apply(POPsim2[,7,,], MARGIN = 3, FUN = function(x) colSums(!is.na(x), na.rm = TRUE), simplify = TRUE)
+    Envovertime2[(t2-PSL$RescueStart+1),,] <- apply(POPsim2[,8,,], MARGIN = 3, FUN = colSums, na.rm = TRUE, simplify = TRUE)/apply(POPsim2[,8,,], MARGIN = 3, FUN = function(x) colSums(!is.na(x), na.rm = TRUE), simplify = TRUE)  
+    Gradvarovertime2[(t2-PSL$RescueStart+1),,] <- apply(POPsim2[,7,,], MARGIN = c(2,3), FUN = popvar) 
+    Envvarovertime2[(t2-PSL$RescueStart+1),,] <- apply(POPsim2[,8,,], MARGIN = c(2,3), FUN = popvar)  
+        #Cancel the remainder of the simulation if all of the metapopulations have died out
+    if (sum(POPsim2[,1,,], na.rm = TRUE)==0) break
+    
     }
+
+   #Save full post-rescue dataset
+    popovertime2df <- data.frame(Rescue = rep(PSL$RescueModes[[1]], each = PSL$Si*secondsesh), Site = rep(1:PSL$Si, each = secondsesh), Time = (PSL$RescueStart:PSL$timeperiod), Variable = "Pop.Size", Value = as.vector(popovertime2))
+    gradovertime2df <- data.frame(Rescue = rep(PSL$RescueModes[[1]], each = PSL$Si*secondsesh), Site = rep(1:PSL$Si, each = secondsesh), Time = (PSL$RescueStart:PSL$timeperiod), Variable = "Grad", Value = as.vector(Gradovertime2))          
+    envovertime2df <- data.frame(Rescue = rep(PSL$RescueModes[[1]], each = PSL$Si*secondsesh), Site = rep(1:PSL$Si, each = secondsesh), Time = (PSL$RescueStart:PSL$timeperiod), Variable = "Env", Value = as.vector(Envovertime2))  
+    gradvarovertime2df <- data.frame(Rescue = rep(PSL$RescueModes[[1]], each = PSL$Si*secondsesh), Site = rep(1:PSL$Si, each = secondsesh), Time = (PSL$RescueStart:PSL$timeperiod), Variable = "Grad.Var", Value = as.vector(Gradvarovertime2))   
+    envvarovertime2df <- data.frame(Rescue = rep(PSL$RescueModes[[1]], each = PSL$Si*secondsesh), Site = rep(1:PSL$Si, each = secondsesh), Time = (PSL$RescueStart:PSL$timeperiod), Variable = "Env.Var", Value = as.vector(Envvarovertime2))   
     
+   dataovertimedf <- rbind(dataovertimedf, popovertime2df, gradovertime2df, envovertime2df, gradvarovertime2df, envvarovertime2df)
+
+} else {
+  donorrecipientslist <- matrix(NA_integer_, ncol = 1+length(PSL$RescueModes[[1]])+sum(PSL$RescueModes[[1]]=="Multiple")*(PSL$RescueSourceNumber-1), nrow = PSL$NumRescueSites) #this assumes 1 row per recipient, we'll resave the empty matrix if strategy = "multiple"
+  colnames(donorrecipientslist) <- c("Recipients", PSL$RescueModes[[1]], rep("Multiple", (PSL$RescueSourceNumber-1)))
+}
+
+ 
+ #drmat <- matrix(NA_integer_, ncol = 1+length(strategies[[1]])+sum(strategies[[1]]=="Multiple")*(NumRescueSources-1), nrow = length(recipients)) #this assumes 1 row per recipient, we'll resave the empty matrix if strategy = "multiple"
+
+
   simfuncreturn <- vector(mode = "list", length = 3)
   simfuncreturn <- list(Data = dataovertimedf, LANDstart = LANDsimstarting, DRlist = donorrecipientslist)
   return(simfuncreturn)
@@ -582,8 +725,9 @@ simfunc <- function(PSL, phenotypes = phenotypesbase, death = deathbase, matecho
 
 #Test if simfunction works on a single
 ```{r simfunctest}
-#x <- simfunc(PSL = Paramlist[[1]])
-#beep(sound = 6)
+x <- simfunc(PSL = Paramlist[[31]])
+View(filter(x$Data, (Variable == "Pop.Size" & Time == 549)))
+beep(sound = 6)
 
 ```
 
@@ -592,8 +736,9 @@ simfunc <- function(PSL, phenotypes = phenotypesbase, death = deathbase, matecho
 ```{r simulate}
 start_time <- Sys.time()
 RNGkind("L'Ecuyer-CMRG")
-set.seed(2076)
-results_mclapply <- mclapply(Paramlist, simfunc, mc.cores = 15)
+#I used to set this seed for testing, but turned it off for repeated use
+#set.seed(2076)
+results_mclapply <- mclapply(Paramlist, simfunc, mc.preschedule = FALSE, mc.cores = 15)
 str(results_mclapply)
 end_time <- Sys.time()
 paste("Start Time =", start_time)
@@ -602,5 +747,6 @@ paste("Elapsed Time =", end_time - start_time)
 
 modeloutput <- list(Paramdf, results_mclapply)
 save(Paramdf, results_mclapply, file = paste0("Outputs/Parallel/", Paramdf$RunID[1], "_Outputs.Rdata"))
+beep(sound = 6)
 ```
 
