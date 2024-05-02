@@ -19,7 +19,7 @@ library(str2str)
 ```
 
 ```{r loaddata}
-load("Outputs/Parallel/2024_01_24_Test_Outputs.Rdata")
+load("Outputs/Parallel/Test_2024_03_20_Outputs.Rdata")
 ```
 
 ```{r organizedata}
@@ -29,8 +29,9 @@ load("Outputs/Parallel/2024_01_24_Test_Outputs.Rdata")
 datalist <- lapply(results_mclapply, FUN = "[[", 1)
 dataarray <- ld2a(datalist)
 
-landlist <-lapply(results_mclapply, FUN = "[[", 2)
+landlist <- lapply(results_mclapply, FUN = "[[", 2)
 landarray <- ld2a(landlist)
+
 
 #This is the final landscape value for for each site
 landgradmatfinal <- landarray[,1,]+matrix(Paramdf$deltaGradLength*Paramdf$deltaGradRate, byrow = TRUE, nrow = mean(Paramdf$Si), ncol = dim(Paramdf)[1])
