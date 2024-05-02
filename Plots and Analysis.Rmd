@@ -1,0 +1,86 @@
+---
+title: "Plots and Analysis"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(ggpubr)
+library(colorspace)
+library(grid)
+library(gdata)
+library(str2str)
+library(parallel)
+library(beepr)
+test <- 1
+
+```
+
+```{r definefunctions}
+datasubset <- function(x){
+  filter(x[[1]], Time == 600)
+}
+
+```
+
+```{r loaddata}
+
+nameslist <- c("A_2024_03_22", "B_2024_03_23", "C_2024_03_23", "D_2024_03_23", "E_2024_03_24", "F_2024_03_24", "G_2024_03_24")
+
+Paramdfcombined <- vector(mode = "list", length = length(nameslist))
+results_mclapplycombined <- vector(mode = "list", length(nameslist))
+for (i in 1:length(nameslist)) {
+  load(file = paste0("Outputs/Parallel/", nameslist[i], "_Outputs.Rdata"))
+  Paramdfcombined[[i]] <- Paramdf
+  results_mclapplycombined[[i]] <- results_mclapply
+}
+Paramdfall <- ld2d(Paramdfcombined)
+
+results_mclapplyall <- unlist(results_mclapplycombined, recursive = FALSE)
+
+beep(sound = 6)
+
+#This gets us a 3d array with all of the outputs
+DRlistlist <- mclapply(results_mclapplyall, FUN = "[[", 3, mc.cores = 12)
+DRlistarray <- lm2a(DRlistlist)
+
+beep(sound = 6)
+
+landlist <- mclapply(results_mclapplyall, FUN = "[[", 2, mc.cores = 12)
+landarray <- ld2a(landlist)
+
+landarrayending <- landarray
+landarrayending[,1,] <- landarray[,1,]+5
+
+beep(sound = 6)
+
+datalist <- mclapply(results_mclapplyall, FUN = datasubset, mc.cores = 12)
+dataarray <- ld2a(datalist)
+
+beep(sound = 4)
+
+datamatrix <- matrix(dataarray, )
+
+
+save.image("loaded.Rdata")
+
+
+
+```
+
+```{r endpoint plots}
+#No intervention
+datamatr
+
+```
+
+
+```
+
+
