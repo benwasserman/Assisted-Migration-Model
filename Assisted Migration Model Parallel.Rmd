@@ -56,10 +56,13 @@ library(purrr)
 #Note that when multiple is used as an option, it should be used the last in the list of options
 #RescueSourceNumber - Number of sources to pull from if mode = "Multiple"
 #Replicates - how many copies of each parameter set are we going to simulate
-Replicates <- 50
+Replicates <- 1
+
+#Set filter: if filter == TRUE, then I have code a few lines down that asks which of the parameter value combinations we want to use, if filter == FALSE it uses all of them
+filter <- FALSE
 
 #Set values for all possible combinations of the input variables
-Paramdfsingle <- expand.grid(RunID = "ITest_2025_03_28", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Multiple")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
+Paramdfsingle <- expand.grid(RunID = "J_2025_03_31", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Multiple")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
 #Test by removing one mode at a time to see if one particular mode stops things
 #c("None", "Demographic", "Grad", "GradEnv", "Multiple")
 #leaving out None threw no errors
@@ -78,7 +81,8 @@ Paramdfsingle <- expand.grid(RunID = "ITest_2025_03_28", Si = 50, K = 500, L = 2
 
 
 #3/28/2025 I'm adding this line to do a subset test for several parameter values we have questions about. In the variable environment, we are surprise that when Sel = 0.5 and Mig %in% c(1e-03, 1e-02, 1e-01) the environment phenotype maladaptation is so large. So I'm going to subset here so that we can run a lot of versions of those parameters
-Paramdfsingle <- Paramdfsingle %>% filter((Sel == 0.5) & (EnvType == "Variable") & (Mig %in% 10^(-3:-1)))
+
+if(filter == TRUE) {Paramdfsingle <- Paramdfsingle %>% filter((Sel == 0.5) & (EnvType == "Variable") & (Mig %in% 10^(-3:-1)))}
 
 Paramdf <- do.call("rbind", replicate( 
   Replicates, Paramdfsingle, simplify = FALSE))
