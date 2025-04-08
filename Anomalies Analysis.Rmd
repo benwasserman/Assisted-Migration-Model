@@ -1,0 +1,72 @@
+---
+title: "Anomalies Analysis"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(ggpubr)
+library(colorspace)
+library(grid)
+library(gdata)
+library(str2str)
+library(parallel)
+library(beepr)
+```
+
+```{r functions}
+datasubset <- function(x){
+  filter(x[[1]], Time == 600)
+}
+
+```
+
+```{r loaddata}
+load("./Outputs/Parallel/ITest_2025_03_28_Outputs.Rdata")
+
+```
+
+
+```{r manipulatedata}
+#results_mclapplyall <- unlist(results_mclapply, recursive = FALSE)
+
+beep(sound = 6)
+
+#This gets us a 3d array with all of the outputs
+DRlistlist <- mclapply(results_mclapply, FUN = "[[", 3, mc.cores = 12)
+DRlistarray <- lm2a(DRlistlist)
+
+beep(sound = 6)
+
+landlist <- mclapply(results_mclapply, FUN = "[[", 2, mc.cores = 12)
+landarray <- ld2a(landlist)
+
+landarrayending <- landarray
+landarrayending[,1,] <- landarray[,1,]+5
+
+beep(sound = 6)
+
+datalist <- mclapply(results_mclapply, FUN = datasubset, mc.cores = 12)
+dataarray <- ld2a(datalist)
+
+beep(sound = 4)
+
+#I just added this to try and overcome the following problem
+datadf <- ld2d(datalist)
+
+#This last function doesn't work as it should here
+datamatrix <- matrix(dataarray,)
+
+```
+
+```{r noneplots}
+nones <- datamatrix[which(datamatrix$)]
+```
