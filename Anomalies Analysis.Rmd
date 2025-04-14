@@ -24,7 +24,7 @@ library(beepr)
 
 ```{r functions}
 datasubset <- function(x){
-  filter(x[[1]], Time == 600)
+  filter(x[[1]], ((Time == 600)&(Rescue == "None")))
 }
 
 ```
@@ -38,7 +38,6 @@ load("./Outputs/Parallel/ITest_2025_03_28_Outputs.Rdata")
 ```{r manipulatedata}
 #results_mclapplyall <- unlist(results_mclapply, recursive = FALSE)
 
-beep(sound = 6)
 
 #This gets us a 3d array with all of the outputs
 DRlistlist <- mclapply(results_mclapply, FUN = "[[", 3, mc.cores = 12)
@@ -59,14 +58,55 @@ dataarray <- ld2a(datalist)
 
 beep(sound = 4)
 
-#I just added this to try and overcome the following problem
-datadf <- ld2d(datalist)
+#
+#Get the values at the endpoint
+poplist <- lapply(datalist, FUN = filter, (Variable == "Pop.Size"))
+gradlist <- lapply(datalist, FUN = filter, (Variable == "Grad"))
+envlist <- lapply(datalist, FUN = filter, (Variable == "Env"))
+gradvarlist <- lapply(datalist, FUN = filter, (Variable == "Grad.Var"))
+envvarlist <- lapply(datalist, FUN = filter, (Variable == "Env.Var"))
 
-#This last function doesn't work as it should here
-datamatrix <- matrix(dataarray,)
+poparray <- ld2a(poplist)
+gradarray <- ld2a(gradlist)
+envarray <- ld2a(envlist)
+gradvararray <- ld2a(gradvarlist)
+envvararray <- ld2a(envvarlist)
+
+Gradmatcharray <- gradarray
+Gradmatcharray[,5,] <- as.numeric(Gradmatcharray[,5,]) -landarrayending[,1,]
+
+Envmatcharray <- envarray
+Envmatcharray[,5,] <- as.numeric(Envmatcharray[,5,]) - landarrayending[,2,]
+
+
+Paramdf$PopSizeFinal <- apply(matrix(as.numeric(poparray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$Maladapt.Grad <- apply(matrix(as.numeric(Gradmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$Maladapt.Env <- apply(matrix(as.numeric(Envmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+
+
+
+#The code below was taken from another script, it needs to be adapted, not used verbatim
+
+#Find differential from optimum
+
+xtest <- apply(poparray, MARGIN = 3, FUN = mean, na.rm = TRUE)
+Gradmatfinal <- 
+  
+  simplify2array(sapply(gradlist, "[", 4, simplify = "array"))
+Paramdf$Maladapt.Grad <- Gradmatfinal - landgradmatfinal
+Envmatfinal <- simplify2array(sapply(envlist, "[", 4, simplify = "array"))
+Paramdf$Maladapt.Env <- Envmatfinal - landenvmatfinal
+
+Paramdf$PopSizeFinal <- sapply(poplist, function(x) mean(x$Value))
+Paramdf$GradVarFinal <- sapply(poplist, function(x) mean(x$Value))
+Paramdf$EnvVarFinal <- sapply(poplist, function(x) mean(x$Value))
+
 
 ```
 
 ```{r noneplots}
-nones <- datamatrix[which(datamatrix$)]
+
+str(Datalistlist)
+
 ```
+
