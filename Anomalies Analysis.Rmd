@@ -67,6 +67,8 @@ gradvarlist <- lapply(datalist, FUN = filter, (Variable == "Grad.Var"))
 envvarlist <- lapply(datalist, FUN = filter, (Variable == "Env.Var"))
 
 poparray <- ld2a(poplist)
+
+
 gradarray <- ld2a(gradlist)
 envarray <- ld2a(envlist)
 gradvararray <- ld2a(gradvarlist)
@@ -79,34 +81,21 @@ Envmatcharray <- envarray
 Envmatcharray[,5,] <- as.numeric(Envmatcharray[,5,]) - landarrayending[,2,]
 
 
+Paramdf$Extant <- apply(matrix(as.numeric(poparray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = function(x) {sum(x>0, na.rm = TRUE)})
 Paramdf$PopSizeFinal <- apply(matrix(as.numeric(poparray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
 Paramdf$Maladapt.Grad <- apply(matrix(as.numeric(Gradmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
 Paramdf$Maladapt.Env <- apply(matrix(as.numeric(Envmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$GradVar <- apply(matrix(as.numeric(gradvararray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$EnvVar <- apply(matrix(as.numeric(envvararray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
 
-
-
-#The code below was taken from another script, it needs to be adapted, not used verbatim
-
-#Find differential from optimum
-
-xtest <- apply(poparray, MARGIN = 3, FUN = mean, na.rm = TRUE)
-Gradmatfinal <- 
-  
-  simplify2array(sapply(gradlist, "[", 4, simplify = "array"))
-Paramdf$Maladapt.Grad <- Gradmatfinal - landgradmatfinal
-Envmatfinal <- simplify2array(sapply(envlist, "[", 4, simplify = "array"))
-Paramdf$Maladapt.Env <- Envmatfinal - landenvmatfinal
-
-Paramdf$PopSizeFinal <- sapply(poplist, function(x) mean(x$Value))
-Paramdf$GradVarFinal <- sapply(poplist, function(x) mean(x$Value))
-Paramdf$EnvVarFinal <- sapply(poplist, function(x) mean(x$Value))
-
+Paramsum <- Paramdf %>% dplyr::summarize(across(Extant:EnvVar, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = Mig)
 
 ```
 
+
 ```{r noneplots}
 
-str(Datalistlist)
+ggplot(data = Paramdf, aes(x = Mig, y = ))
 
 ```
 
