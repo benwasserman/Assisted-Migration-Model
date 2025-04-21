@@ -40,12 +40,12 @@ load("./Outputs/Parallel/ITest_2025_03_28_Outputs.Rdata")
 
 
 #This gets us a 3d array with all of the outputs
-DRlistlist <- mclapply(results_mclapply, FUN = "[[", 3, mc.cores = 12)
+DRlistlist <- mclapply(results_mclapply, FUN = "[[", 3)
 DRlistarray <- lm2a(DRlistlist)
 
 beep(sound = 6)
 
-landlist <- mclapply(results_mclapply, FUN = "[[", 2, mc.cores = 12)
+landlist <- mclapply(results_mclapply, FUN = "[[", 2)
 landarray <- ld2a(landlist)
 
 landarrayending <- landarray
@@ -53,7 +53,7 @@ landarrayending[,1,] <- landarray[,1,]+5
 
 beep(sound = 6)
 
-datalist <- mclapply(results_mclapply, FUN = datasubset, mc.cores = 12)
+datalist <- mclapply(results_mclapply, FUN = datasubset)
 dataarray <- ld2a(datalist)
 
 beep(sound = 4)
@@ -90,12 +90,15 @@ Paramdf$EnvVar <- apply(matrix(as.numeric(envvararray[,5,]), nrow = 50, byrow = 
 
 Paramsum <- Paramdf %>% dplyr::summarize(across(Extant:EnvVar, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = Mig)
 
+ggplot(data = Paramdf, aes(x = log10(Mig), y = Maladapt.Env, group = log10(Mig))) + geom_boxplot() + geom_jitter() + theme_classic()
+
+
 ```
 
 
 ```{r noneplots}
 
-ggplot(data = Paramdf, aes(x = Mig, y = ))
+
 
 ```
 
