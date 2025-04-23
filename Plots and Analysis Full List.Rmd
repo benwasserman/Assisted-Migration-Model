@@ -30,7 +30,7 @@ datasubset <- function(x){
 
 ```{r loaddata}
 
-nameslist <- c("A_2024_03_22", "B_2024_03_23", "C_2024_03_23", "D_2024_03_23", "E_2024_03_24", "F_2024_03_24", "G_2024_03_24", "H_2024_03_24", "I_2024_03_25", "J_2025_04_01", "K_2025_04_01", "L_2025_04_02", "M_2025_04_03", "N_2025_04_04", "O_2025_04_07", "P_2025_04_08", "Q_2025_04_09",  "R_2025_04_10", "S_2025_04_10", "T_2025_04_11", "U_2025_04_11", "V_2025_04_15", "W_2025_04_16", "X_2025_04_17", "Y_2025_04_21", "Z_2025_04_22")
+nameslist <- c("A_2024_03_22", "B_2024_03_23", "C_2024_03_23", "D_2024_03_23", "E_2024_03_24", "F_2024_03_24", "G_2024_03_24", "H_2024_03_24", "I_2024_03_25", "J_2025_04_01", "K_2025_04_01", "L_2025_04_02", "M_2025_04_03", "N_2025_04_04", "O_2025_04_07", "P_2025_04_08", "Q_2025_04_09",  "R_2025_04_10", "S_2025_04_10", "T_2025_04_11", "U_2025_04_11", "V_2025_04_15", "W_2025_04_16", "X_2025_04_17", "Y_2025_04_21")
 
 Paramdfcombined <- vector(mode = "list", length = length(nameslist))
 results_mclapplycombined <- vector(mode = "list", length(nameslist))
@@ -40,6 +40,9 @@ for (i in 1:length(nameslist)) {
   results_mclapplycombined[[i]] <- results_mclapply
 }
 Paramdfall <- ld2d(Paramdfcombined)
+
+#A-Y is 30 iterations, 120x30 = 3600 rows
+nrow(Paramdfall)
 
 results_mclapplyall <- unlist(results_mclapplycombined, recursive = FALSE)
 
