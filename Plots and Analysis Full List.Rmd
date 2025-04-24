@@ -82,9 +82,43 @@ beep(sound = 4)
 datamatrix <- matrix(dataarray, )
 
 
+#Get the values at the endpoint
+poplist <- lapply(datalist, FUN = filter, (Variable == "Pop.Size"))
+gradlist <- lapply(datalist, FUN = filter, (Variable == "Grad"))
+envlist <- lapply(datalist, FUN = filter, (Variable == "Env"))
+gradvarlist <- lapply(datalist, FUN = filter, (Variable == "Grad.Var"))
+envvarlist <- lapply(datalist, FUN = filter, (Variable == "Env.Var"))
+
+poparray <- ld2a(poplist)
 
 
-save.image("loadedFullList.Rdata")
+gradarray <- ld2a(gradlist)
+envarray <- ld2a(envlist)
+gradvararray <- ld2a(gradvarlist)
+envvararray <- ld2a(envvarlist)
+
+Gradmatcharray <- gradarray
+Gradmatcharray[,5,] <- as.numeric(Gradmatcharray[,5,]) - rbind(landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,])
+
+Envmatcharray <- envarray
+Envmatcharray[,5,] <- as.numeric(Envmatcharray[,5,]) - rbind(landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,])
+
+#This Part Still needs work - doesn't translate from the anomalies script I took it from. There these were already skimmed down to just the "none" interventions, but now I want both that and the comparison between intervention strategies
+Paramdf$Extant <- apply(matrix(as.numeric(poparray[,5,]), nrow = nrow(poparray[,5,]), byrow = FALSE), MARGIN = 2, FUN = function(x) {sum(x>0, na.rm = TRUE)})
+Paramdf$PopSizeFinal <- apply(matrix(as.numeric(poparray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$Maladapt.Grad <- apply(matrix(as.numeric(Gradmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$Maladapt.Env <- apply(matrix(as.numeric(Envmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$GradVar <- apply(matrix(as.numeric(gradvararray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdf$EnvVar <- apply(matrix(as.numeric(envvararray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+
+Paramsum <- Paramdf %>% dplyr::summarize(across(Extant:EnvVar, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = Mig)
+
+ggplot(data = Paramdf, aes(x = log10(Mig), y = Maladapt.Env, group = log10(Mig))) + geom_boxplot() + geom_jitter() + theme_classic()
+
+beep(sound =4)
+
+
+#save.image("loadedFullList.Rdata")
 
 
 
