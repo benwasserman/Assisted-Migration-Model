@@ -81,6 +81,13 @@ beep(sound = 4)
 
 datamatrix <- matrix(dataarray, )
 
+save.image("loadedFullList.Rdata")
+
+
+
+ #test2 <-  apply(dataarray, MARGIN = 3, FUN = function(x) {pivot_wider(data.frame(x), names_from = c(Rescue, Variable), values_from = Value)})
+
+ #test3 <- ld2a(test2)
 
 #Get the values at the endpoint
 poplist <- lapply(datalist, FUN = filter, (Variable == "Pop.Size"))
@@ -104,21 +111,42 @@ Envmatcharray <- envarray
 Envmatcharray[,5,] <- as.numeric(Envmatcharray[,5,]) - rbind(landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,])
 
 #This Part Still needs work - doesn't translate from the anomalies script I took it from. There these were already skimmed down to just the "none" interventions, but now I want both that and the comparison between intervention strategies
-Paramdf$Extant <- apply(matrix(as.numeric(poparray[,5,]), nrow = nrow(poparray[,5,]), byrow = FALSE), MARGIN = 2, FUN = function(x) {sum(x>0, na.rm = TRUE)})
-Paramdf$PopSizeFinal <- apply(matrix(as.numeric(poparray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
-Paramdf$Maladapt.Grad <- apply(matrix(as.numeric(Gradmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
-Paramdf$Maladapt.Env <- apply(matrix(as.numeric(Envmatcharray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
-Paramdf$GradVar <- apply(matrix(as.numeric(gradvararray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
-Paramdf$EnvVar <- apply(matrix(as.numeric(envvararray[,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
 
-Paramsum <- Paramdf %>% dplyr::summarize(across(Extant:EnvVar, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = Mig)
 
-ggplot(data = Paramdf, aes(x = log10(Mig), y = Maladapt.Env, group = log10(Mig))) + geom_boxplot() + geom_jitter() + theme_classic()
+
+
+
+Paramdfall$Extant_None <- apply(matrix(as.numeric(poparray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = function(x) {sum(x>0, na.rm = TRUE)})
+Paramdfall$PopSize_None <- apply(matrix(as.numeric(poparray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdfall$Maladapt.Grad_None <- apply(matrix(as.numeric(Gradmatcharray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdfall$Maladapt.Env_None <- apply(matrix(as.numeric(Envmatcharray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdfall$GradVar_None <- apply(matrix(as.numeric(gradvararray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+Paramdfall$EnvVar_None <- apply(matrix(as.numeric(envvararray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
+
+Paramsum <- Paramdfall %>% dplyr::summarize(across(Extant_None:EnvVar_None, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+
+ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = Extant_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
+
+ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = PopSize_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
+
+ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = Maladapt.Grad_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
+
+ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = Maladapt.Env_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
+
+ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = GradVar_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
+
+ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = EnvVar_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
+
+
+######
+
+ggplot(data = Paramdfall, aes(x = log10(Mig), y = Maladapt.Env_None, group = log10(Mig))) + geom_boxplot() + geom_jitter() + theme_classic()
 
 beep(sound =4)
 
 
-#save.image("loadedFullList.Rdata")
+
 
 
 
