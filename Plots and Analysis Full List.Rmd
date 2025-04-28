@@ -142,6 +142,27 @@ ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = En
 
 ##Recreate combined plot, we do each panel singly and then combine
 
+
+
+  #Set ranges for plots
+  tempmaladaptrange <- range(ParamSum$gradmeans, na.rm = TRUE)
+  tempmaladaptrangeround <- c(round(tempmaladaptrange[1], digits = 1)-0.1, round(tempmaladaptrange[2], digits = 1)+0.1)
+    envmaladaptrange <- range(plotdatadf$envmeans, na.rm = TRUE)
+  envmaladaptrangeround <- c(round(envmaladaptrange[1], digits = 1)-0.1, round(envmaladaptrange[2], digits = 1)+0.1)
+
+  
+  gradvarmax <- ceiling(max(plotdatadf$gradvars, na.rm = TRUE))
+  envvarmax <- ceiling(max(plotdatadf$envvars, na.rm = TRUE))
+  
+  spacer <- rep(20,4)
+  
+
+
+
+#Rescue Effects Plots is probably the right template
+
+extantfixed <- ggplot(data = filter(Paramsum, EnvType == "Fixed"), aes(x = -(Mig+0.000001), y = (11-Sel))) + geom_tile(aes(fill = Extant_None_mean)) + scale_fill_viridis(limits = c(0,500), name = "Populations\nExtant") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
 ggplot(data = filter(Paramsum, aes(x = -log10(Mig + 0.000001), y = -Omega2grad, fill = Extant_Non_mean)) + geom_tile() + scale_fill_viridis() + theme_classic() 
 
 
