@@ -1,0 +1,338 @@
+---
+title: "Rescue Effect Plots"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(ggpubr)
+library(colorspace)
+library(grid)
+library(gdata)
+
+```
+
+```{r}
+
+
+#Here are the parameters used for this round of tests
+#Set parameters that will be used the same in all simulations
+#Landscape Parameters
+Si <- 50 #Number of sites
+K <- 500 #Carrying capacity in each site
+L <- 20 #Total number of Locii
+
+#Population growth/adaptation parameters
+phenvar <- 0.3 #Starting variance for values of each allele
+S0 <- 0.75 #Baseline survival rate, there will always be some mortality, even for the perfectly adapted
+MuOff <- 3 #Mean offspring per female per reproductive event
+
+#Simulation Length
+timeperiod<- 600 
+
+#Gradient Change parameters
+#Note if deltaGradStart > timperiod, then there will be no gradient change
+deltaGradStart <- 501 #Starting time point
+deltaGradRate <- 0.05 #Change per time step
+deltaGradLength <- 100 #Number of time steps
+
+#Rescue parameters
+#Note if RescueStart > timeperiod, then there will be no rescue
+RescueStart <- 550 #Starting time point
+RescueSites <- 0.1 #Proportion of sites to rescue (lowest RescueSites will be targeted for supplemental gene flow)
+RescueSize <- 50 #Number of individual to send to each rescue site each year
+RescueLength <- 1 #Number of time steps to repeat rescue over
+NumRescueSites <- floor(Si*RescueSites) #Convert proportion of sites to a number, because I'll need to use that a lot
+
+#Mode is the type of genetic rescue strategy to use, below are the 5 options
+#None: no rescue
+#Demographic:  rescue from the geographically closest single population
+#Grad: rescue based on the closest population to the ending value of Grad
+#GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
+
+#Multiple: rescue based on a mix of 5 local populations, not based on Grad or Env
+#RescueMode <- "GradEnv" 
+RescueSourceNumber <- 5 #Number of sources to pull from if mode = "Multiple"
+
+
+```
+
+These graphics are all based on the no rescue scenario
+```{r}
+
+load(file = "Outputs/Sensitivity/Test2024_01_06_NoRescue.Rdata")
+
+#Landscape Image
+templandgrad <- ggplot(data = filter(giflist[[1]], Variable == "Land.Grad", Time == 1), aes(x = Variable, y = Site)) + geom_tile(aes(fill = Value)) + scale_x_discrete(labels = "Temperature") + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(limits = c(0,(Si+(deltaGradRate*deltaGradLength))), option = "G") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=20), axis.title = element_text(size = 20))
+
+  templandenvfixed <- ggplot(data = filter(giflist[[1]], Variable == "Land.Env", Time == 1), aes(x = Variable, y = Site)) + geom_tile(aes(fill = Value)) + scale_x_discrete(labels = "Environment") + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(limits = c(0,Si), option = "G") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=20), axis.title = element_text(size = 20))
+  
+   templandenvvar <- ggplot(data = filter(giflist[[11]], Variable == "Land.Env", Time == 1), aes(x = Variable, y = Site)) + geom_tile(aes(fill = Value)) + scale_x_discrete(labels = "Environment") + scale_y_continuous(breaks = c(1, seq(from = 10, to = Si, by = 10))) + scale_fill_viridis(limits = c(0,Si), option = "G") +  xlab(NULL) + theme_classic() + theme(legend.position = "top", axis.line.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=20), axis.title = element_text(size = 20))
+
+     
+   f1a <- annotate_figure(ggarrange(templandgrad, templandenvfixed, legend = "none"), top = text_grob("Fixed", size = 25))
+   
+   f1b <- annotate_figure(ggarrange(templandgrad, templandenvvar, legend = "none"), top = text_grob("Variable", size = 25))
+   
+
+   pdf(file = "Outputs/Sensitivity/AFSPoster/f1a.pdf")
+   f1a
+   dev.off()
+   pdf(file = "Outputs/Sensitivity/AFSPoster/f1b.pdf")
+   f1b
+   dev.off()
+
+   
+   #Fitness functions
+   x <- seq(-8,8,0.1)
+   y <- dnorm(x)
+   y2 <- dnorm(x, sd = 3)
+   
+   pdf(file = "Outputs/Sensitivity/AFSPoster/f2.pdf")
+   par(mar = c(5.1, 6.1, 4.1, 2.1))
+   plot(y2~x, col = "blue", type = "l", ylim = c(0,0.4), xlab = "Phenotype", ylab = "Fitness", cex.lab = 3, xaxt = "n", yaxt = "n")
+   lines(y~x, col = "red", type = "l")
+   dev.off()
+   
+   #Result of No Rescue Scenario
+   
+  means <- apply(MigSel, MARGIN = c(1,3), FUN = mean, na.rm = TRUE)
+  popmeans <- means[1,]
+  gradmeans <- means[2,]
+  envmeans <- means[3,]
+  gradvars <- means[4,]
+  envvars <- means[5,]
+  extantPreGC <- means[6,]>499
+  extantPostGC <- means[6,]==600
+  plotdatadf <- data.frame(Mig = MigSelvals$Mig, Sel = MigSelvals$Sel, Envmode = MigSelvals$Envmode, popmeans, gradmeans, envmeans, gradvars, envvars)
+
+  #Set ranges for plots
+  tempmaladaptrange <- range(plotdatadf$gradmeans, na.rm = TRUE)
+  tempmaladaptrangeround <- c(round(tempmaladaptrange[1], digits = 1)-0.1, round(tempmaladaptrange[2], digits = 1)+0.1)
+    envmaladaptrange <- range(plotdatadf$envmeans, na.rm = TRUE)
+  envmaladaptrangeround <- c(round(envmaladaptrange[1], digits = 1)-0.1, round(envmaladaptrange[2], digits = 1)+0.1)
+
+  
+  gradvarmax <- ceiling(max(plotdatadf$gradvars, na.rm = TRUE))
+  envvarmax <- ceiling(max(plotdatadf$envvars, na.rm = TRUE))
+  
+  spacer <- rep(20,4)
+  
+  
+popmeansfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500), name = "Population\nMeans") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+popmeansvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500), name = "Population\nMeans") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+gradmeansfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = gradmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = tempmaladaptrangeround, name = "Temperature\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+  
+gradmeansvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = gradmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = tempmaladaptrangeround, name = "Temperature\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+envmeansfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = envmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = envmaladaptrangeround, name = "Environment\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+envmeansvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = envmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', limits = envmaladaptrangeround, name = "Environment\nPhenotype\nMismatch") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+gradvarsfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,gradvarmax)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+gradvarsvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,gradvarmax)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+envvarsfixed <- ggplot(data = filter(plotdatadf, Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,envvarmax)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+envvarsvariable <- ggplot(data = filter(plotdatadf, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,envvarmax)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + theme_classic() + theme(plot.margin = unit(spacer, "points"), axis.title = element_blank(), legend.title=element_text(size=20), axis.text = element_text(size = 15), legend.text = element_text(size = 15))
+
+
+norescueplot <- ggpubr:::ggarrange(plotlist = list(popmeansfixed, popmeansvariable, gradmeansfixed, gradmeansvariable, envmeansfixed, envmeansvariable, gradvarsfixed, gradvarsvariable, envvarsfixed, envvarsvariable), ncol = 2, nrow = 5)
+
+plotpops <- ggarrange(plotlist = list(popmeansfixed, popmeansvariable), ncol = 2, common.legend = TRUE, legend = "right")
+plotgrad <- ggarrange(plotlist = list(gradmeansfixed, gradmeansvariable), ncol = 2, common.legend = TRUE, legend = "right")
+plotenv <- ggarrange(plotlist = list(envmeansfixed, envmeansvariable), ncol = 2, common.legend = TRUE, legend = "right")
+
+totalplot <- ggarrange(plotlist = list(plotpops, plotgrad, plotenv), ncol = 1)
+totalplot2 <- annotate_figure(totalplot, left = textGrob("Selection Strength", rot = 90, vjust = 1, gp = gpar(cex = 3)), bottom = textGrob("Proportion Migrants", vjust = -0.25, gp = gpar(cex = 3)), top = textGrob("Fixed Environment               Variable Environment       ", gp = gpar(cex = 3)))
+
+pdf(file = "Outputs/Sensitivity/AFSPoster/f3.pdf", height = 12, width = 24)
+totalplot2
+dev.off()
+
+png(file = "Outputs/Sensitivity/AFSPoster/f3.png", height = 3840, width = 7680)
+totalplot2
+dev.off()
+   
+   
+#Simple Statistical Tests
+summary(lm(popmeans ~ log10(Mig)*Sel*Envmode, data = plotdatadf))
+summary(lm(gradmeans ~ log10(Mig)*Sel*Envmode, data = plotdatadf))
+summary(lm(envmeans ~ log10(Mig)*Sel*Envmode, data = plotdatadf))
+
+   
+```
+
+Functions to compare rescue to no rescue scenarios
+``` {r RescueLength}
+
+  #This is a function to recalculate plot data based only on the rescued populations
+  #X is going to be the MigSel from that iteration
+  #Y is going to be a matrix, each row is the IDs of 5 rescued populations, for each of the sheets in MigSel
+  #Z is the MigSelvals from that iteration
+  #It's going to return a reduced version of plotdatadf (from above) that was calculated on values from the rescued (or rescue = equivalents, in the case of the MigSel from the no rescue run) 
+  rescuesubset <- function(X, Y, Z) {
+    X2<- array(NA, dim = c(6,NumRescueSites,dim(MigSel)[3]))
+    for (j in 1:dim(MigSel)[3]){
+      X2[,,j] <- MigSel[,Y[j,],j]
+    }
+
+      Xmeans <- apply(X2, MARGIN = c(1,3), FUN = mean, na.rm = TRUE)
+  Xpopmeans <- Xmeans[1,]
+  Xgradmeans <- Xmeans[2,]
+  Xenvmeans <- Xmeans[3,]
+  Xgradvars <- Xmeans[4,]
+  Xenvvars <- Xmeans[5,]
+  XextantPreGC <- Xmeans[6,]>499
+  XextantPostGC <- Xmeans[6,]==600
+  Xplotdatadf <- data.frame(Mig = Z$Mig, Sel = Z$Sel, Envmode = Z$Envmode, popmeans = Xpopmeans, gradmeans = Xgradmeans, envmeans = Xenvmeans, gradvars = Xgradvars, envvars = Xenvvars)
+  return(Xplotdatadf)  
+}
+
+#Calculate the difference between two simulations, or in our case, the rescued (or equivalents), in two simulations
+simulationdifference <- function(U,W) {
+  X3 <- data.frame(Mig = U$Mig, Sel = U$Sel, Envmode = U$Envmode, popmeans = (U$popmeans - W$popmeans), gradmeans = (U$gradmeans - W$gradmeans), envmeans = (U$envmeans - W$envmeans), gradvars = (U$gradvars - W$gradvars), envvars = (U$envvars - W$envvars))
+  return(X3)
+}
+
+
+```
+
+```{r comparingrescues}
+#Clear the previous work so that we start loading new data, some names may have been reused
+#rm(list = ls())
+load(file = "Outputs/Sensitivity/Test2024_01_06_NoRescue.Rdata")
+MigSelNoRescue <- MigSel
+giflistNoRescue <- giflist
+
+#Identify the populations that would have been rescued in the no rescue scenario
+
+rescueequivalents <- matrix(NA, nrow = length(giflistNoRescue), ncol = NumRescueSites)
+for (i in 1:length(giflistNoRescue)){
+  
+  rescuetimepops <-filter(giflistNoRescue[[i]], Time == RescueStart, Variable == "Pop.Size") %>% select(Value)
+  rescuetimepopsorted <- sort(unlist(as.vector(rescuetimepops)), index.return = TRUE)
+  #Identify the population size of the NumRescueSites smallest site
+  rescuetimepopsortedmaxrecipient <- rescuetimepopsorted$x[NumRescueSites]
+  #Identify all populations smaller than that threshold and a random selection of those equal to it (in case there are lots of ties, such as in the case where many local populations are extinct). I was worried about this case in particular, because taking just the 5 smallest if there are 25 pops at 0, then it will take the sites with the lowest index values, a bias we don't want to introduce here. Need to use resample to be robust to both ties and non-ties
+  if(is.na(rescuetimepopsortedmaxrecipient)) {
+    rescueequivalents[i,] <- NA
+  } else {
+  rescuetimepopsortedbelow <-rescuetimepopsorted$ix[which(rescuetimepopsorted$x<rescuetimepopsortedmaxrecipient)]
+  rescuetimepopsortedequal <-rescuetimepopsorted$ix[which(rescuetimepopsorted$x==rescuetimepopsortedmaxrecipient)]
+  rescuetimerecipients <- c(rescuetimepopsortedbelow, resample(x = rescuetimepopsortedequal, size = NumRescueSites-length(rescuetimepopsortedbelow)))
+  
+  rescueequivalents[i,] <- rescuetimerecipients
+  
+  }
+}
+
+#Get the rescue equivalent subset data from the no rescue scenario
+norescueplotdataRE <- rescuesubset(MigSel, rescueequivalents, MigSelvals)
+
+
+#Demographic Rescue
+load(file = "Outputs/Sensitivity/Test2024_01_06_Rescue_Demographic.Rdata")
+MigSelRescueDemographic <- MigSel
+giflistRescueDemographic <- giflist
+demographicrescuesubset <- t(donorrecipientarray[,2,])
+demographicrescueplotdata <- rescuesubset(MigSelRescueDemographic, demographicrescuesubset, MigSelvals)
+
+#Grad Rescue
+load(file = "Outputs/Sensitivity/Test2024_01_06_RescueGrad.Rdata")
+MigSelRescueGrad <- MigSel
+giflistRescueGrad <- giflist
+Gradrescuesubset <- t(donorrecipientarray[,2,])
+Gradrescueplotdata <- rescuesubset(MigSelRescueGrad, Gradrescuesubset, MigSelvals)
+
+#GradEnv Rescue
+load(file = "Outputs/Sensitivity/Test2024_01_06_RescueGradEnv.Rdata")
+MigSelRescueGradEnv <- MigSel
+giflistRescueGradEnv <- giflist
+GradEnvrescuesubset <- t(donorrecipientarray[,2,])
+GradEnvrescueplotdata <- rescuesubset(MigSelRescueGradEnv, GradEnvrescuesubset, MigSelvals)
+
+#Save the differences 
+demovsnonedf <- simulationdifference(demographicrescueplotdata, norescueplotdataRE)
+gradvsnonedf <- simulationdifference(Gradrescueplotdata, norescueplotdataRE)
+gradenvvsnonedf <- simulationdifference(GradEnvrescueplotdata, norescueplotdataRE)
+
+
+```
+
+Plot differences between rescue and nonrescue
+```{r plotdifferences}
+
+spacer2 <- spacer+10
+#Plot Population differences
+
+comparedata <- rbind(demovsnonedf, gradvsnonedf, gradenvvsnonedf)
+comparedata$Rescue <- rep(c("Nearest Neighbor", "Temp Match", "Temp & Env Match"), each = 120)
+comparedata$Rescue <- factor(comparedata$Rescue, levels = c("Nearest Neighbor", "Temp Match", "Temp & Env Match"))
+
+popcomparegraph <- ggplot(data = comparedata, aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = popmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', name = "Demographic\nRescue\nEffect")  + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + facet_grid(Rescue~Envmode) + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic() + theme(plot.margin = unit(spacer, "points"), legend.title=element_text(size=15), axis.text = element_text(size = 15), axis.title= element_text(size = 20), legend.text = element_text(size = 15), strip.text = element_text(size = 15))
+
+popcomparegraph2 <- ggplot(data = filter(comparedata, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = popmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', name = "Demographic Rescue Effect")  + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + facet_grid(Rescue~.) + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic() + theme(plot.margin = unit(spacer2, "points"), legend.title=element_text(size=25), axis.text = element_text(size = 20), axis.title= element_text(size = 25), legend.text = element_text(size = 20), strip.text = element_text(size = 20), legend.position = "top", legend.key.width = unit(2.5, "cm"))
+
+gradcomparegraph <- ggplot(data = comparedata, aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = gradmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', name = "Evolutionary\nRescue\nEffect") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + facet_grid(Rescue~Envmode) + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic() + theme(plot.margin = unit(spacer, "points"), legend.title=element_text(size=15), axis.text = element_text(size = 15), axis.title= element_text(size = 20), legend.text = element_text(size = 15), strip.text = element_text(size = 15))
+
+gradcomparegraph2 <- ggplot(data = filter(comparedata, Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_tile(aes(fill = gradmeans)) + scale_fill_continuous_divergingx(palette = 'RdBu', name = "Evolutionary Rescue Effect") + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + facet_grid(Rescue~.) + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic() + theme(plot.margin = unit(spacer2, "points"), legend.title=element_text(size=25), axis.text = element_text(size = 20), axis.title= element_text(size = 25), legend.text = element_text(size = 20), strip.text = element_text(size = 20), legend.position = "top", legend.key.width = unit(2.5, "cm"))
+
+fig4plot <- ggarrange(popcomparegraph2 + theme(axis.title = element_blank()), gradcomparegraph2+ theme(axis.title = element_blank()))
+fig4 <-  annotate_figure(fig4plot, left = textGrob("Selection Strength", rot = 90, vjust = 1, gp = gpar(cex = 3)), bottom = textGrob("Proportion Migrants", vjust = -0.25, gp = gpar(cex = 3)))
+
+pdf(file = "Outputs/Sensitivity/AFSPoster/f4.pdf", height = 12, width = 24)
+fig4
+dev.off()
+
+```
+
+Analyze rescue effects
+```{r analyzerescue}
+comparedata2 <- filter(comparedata, Envmode == "Variable")
+comparedata3 <- filter(comparedata, Envmode == "Fixed")
+
+summary(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata2))
+summary(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata2))
+
+anova(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata2))
+anova(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata2))
+
+summary(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata))
+summary(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata))
+
+anova(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata))
+anova(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata))
+
+##Type II sum of squares
+Anova(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata2), type = "II")
+summary(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata2))
+
+Anova(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata2), type = "II")
+summary(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata2))
+
+Anova(lm(popmeans~Envmode*log10(Mig)*Sel*Rescue, data = comparedata), type = "II")
+summary(lm(popmeans~Envmode*log10(Mig)*Sel*Rescue, data = comparedata))
+
+Anova(lm(gradmeans~Envmode*log10(Mig)*Sel*Rescue, data = comparedata), type = "II")
+summary(lm(gradmeans~Envmode*log10(Mig)*Sel*Rescue, data = comparedata))
+
+Anova(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata3), type = "II")
+summary(lm(popmeans~log10(Mig)*Sel*Rescue, data = comparedata3))
+
+Anova(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata3), type = "II")
+summary(lm(gradmeans~log10(Mig)*Sel*Rescue, data = comparedata3))
+
+
+```
