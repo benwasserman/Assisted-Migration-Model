@@ -126,6 +126,8 @@ Paramdfall$EnvVar_None <- apply(matrix(as.numeric(envvararray[1:50,5,]), nrow = 
 Paramsum <- Paramdfall %>% dplyr::summarize(across(Extant_None:EnvVar_None, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
 
 
+##Basic two-panel plots
+
 ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = Extant_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
 
 ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = PopSize_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
@@ -137,6 +139,10 @@ ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = Ma
 ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = GradVar_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
 
 ggplot(data = Paramsum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = EnvVar_None_mean)) + geom_tile() + scale_fill_viridis() + facet_grid(~EnvType) + theme_classic()
+
+##Recreate combined plot, we do each panel singly and then combine
+
+ggplot(data = filter(Paramsum, aes(x = -log10(Mig + 0.000001), y = -Omega2grad, fill = Extant_Non_mean)) + geom_tile() + scale_fill_viridis() + theme_classic() 
 
 
 ######
