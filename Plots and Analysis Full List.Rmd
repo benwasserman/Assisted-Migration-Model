@@ -5,6 +5,14 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+This script currently processes raw output data from the simulation runs and makes plots (of the no-rescue scenarios).
+The processing is quite time-consuming
+
+I'd like to move towards 3-4 files
+1. Process no-rescue scenario data
+2. Process rescue-scenario data
+3 (&4?) Plots
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -218,3 +226,7 @@ write.csv(Paramsum2, "./Outputs/V2 Figures/Paramsum.csv")
 ```
 
 
+```{r rescuedata}
+#Here I need to look at "Rescue Effects Plots.Rmd" and modify code from the chunk: RescueLength and beyond.
+
+```
