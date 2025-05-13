@@ -1,0 +1,48 @@
+---
+title: "DataCleaning_Rescue"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+Process Remaining Rescue-Scenario Data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(ggpubr)
+library(colorspace)
+library(grid)
+library(gdata)
+library(str2str)
+library(parallel)
+library(beepr)
+
+```
+
+
+```{r loaddata}
+load("loadedFullList.Rdata")
+```
+
+There are 3 types of comparisons worth making:
+1. Comparing the average of all sites on the landscape between no rescue and rescue - did the effect percolate up to the whole metapopulation
+2. Comparing the (5) demes with the smallest nonzero population size between no rescue and rescue - did the effect the most marginal demes in the metapopulation
+3. Comparing the (5) demes that received supplementation between no rescue and rescue - did the target demes benefit? 
+
+```{r cleanrescuedata}
+
+```
+
+```{r saverescuedata}
+
+save.image("RescueData.Rdata")
+
+```
+
+
+
+```
