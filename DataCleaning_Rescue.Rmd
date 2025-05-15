@@ -47,7 +47,7 @@ datapivot <- function(df) {
   data.frame(df) %>% pivot_wider(names_from = Rescue, values_from = Value)
 }
 
-dataarrayrescue <- lapply(datalist, )
+dataarrayrescue <- lapply(datalist, FUN = datapivot)
 
 
 ```
