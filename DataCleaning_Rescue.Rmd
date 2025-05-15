@@ -33,7 +33,22 @@ There are 3 types of comparisons worth making:
 2. Comparing the (5) demes with the smallest nonzero population size between no rescue and rescue - did the effect the most marginal demes in the metapopulation
 3. Comparing the (5) demes that received supplementation between no rescue and rescue - did the target demes benefit? 
 
+```{r functions}
+#Find the data at time point 499, just before rescue occurs
+prerescuedatasubset <- function(x){
+  filter(x[[1]], Time == 499)
+}
+
+```
+
 ```{r cleanrescuedata}
+
+datapivot <- function(df) {
+  data.frame(df) %>% pivot_wider(names_from = Rescue, values_from = Value)
+}
+
+dataarrayrescue <- lapply(datalist, )
+
 
 ```
 

@@ -54,12 +54,11 @@ nrow(Paramdfall)
 
 #This gets us a 3d array with all of the outputs
 results_mclapplyall <- unlist(results_mclapplycombined, recursive = FALSE)
-beep(sound = 6)
 
 
 #This gets us a 3d array with all of the outputs
 DRlistlist <- lapply(results_mclapplyall, FUN = "[[", 3)
-beep(sound = 6)
+
 
 #I know that DRlistlist[[1]] is blank because the population went extinct
 #I thought that the model would always fill that in but apparently not
@@ -68,7 +67,7 @@ beep(sound = 6)
 #DRlistlist <- mclapply(results_mclapplyall, FUN = "[[", 3, mc.cores = 15)
 DRlistarray <- lm2a(DRlistlist)
 
-beep(sound = 6)
+
 
 landlist <- mclapply(results_mclapplyall, FUN = "[[", 2, mc.cores = 1)
 landarray <- ld2a(landlist)
@@ -76,12 +75,10 @@ landarray <- ld2a(landlist)
 landarrayending <- landarray
 landarrayending[,1,] <- landarray[,1,]+5
 
-beep(sound = 6)
-
 datalist <- mclapply(results_mclapplyall, FUN = datasubset, mc.cores = 1)
 dataarray <- ld2a(datalist)
 
-beep(sound = 4)
+
 
 datamatrix <- matrix(dataarray, )
 
@@ -126,5 +123,7 @@ Paramsum$Extant_None_mean[which(Paramsum$Extant_None_mean==0)]<-NA
 Paramsum$PopSize_None_mean[which(Paramsum$PopSize_None_mean==0)]<-NA
 
 save.image("loadedFullList.Rdata")
+
+beep(sound = 6)
 
 ```
