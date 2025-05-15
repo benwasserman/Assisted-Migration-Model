@@ -44,11 +44,19 @@ prerescuedatasubset <- function(x){
 ```{r cleanrescuedata}
 
 datapivot <- function(df) {
-  data.frame(df) %>% pivot_wider(names_from = Rescue, values_from = Value)
+  data.frame(df) %>% pivot_wider(names_from = Rescue, values_from = Value) %>% mutate(DemographicDiff = Demographic-None, GradDiff = Grad - None, GradEnvDiff = GradEnv - None, MultipleDiff = Multiple - None)
 }
+##The grad and env matches need to be calculated here, before the scenarios are conducted
 
-dataarrayrescue <- lapply(datalist, FUN = datapivot)
 
+datalistrescue <- lapply(datalist, FUN = datapivot)
+
+
+poplistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Pop.Size"))
+gradlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Grad"))
+envlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Env"))
+gradvarlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Grad.Var"))
+envvarlistlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Env.Var"))
 
 ```
 
