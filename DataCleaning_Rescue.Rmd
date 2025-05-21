@@ -43,20 +43,33 @@ prerescuedatasubset <- function(x){
 
 ```{r cleanrescuedata}
 
+#format grad and env match then pivot everything so that we have differentials between each type of rescue and the no-rescue scenario
+
+gradmatchlist <- a2ld(Gradmatcharray, 3)
+envmatchlist <- a2ld(Envmatcharray, 3)
+
 datapivot <- function(df) {
   data.frame(df) %>% pivot_wider(names_from = Rescue, values_from = Value) %>% mutate(DemographicDiff = Demographic-None, GradDiff = Grad - None, GradEnvDiff = GradEnv - None, MultipleDiff = Multiple - None)
 }
-##The grad and env matches need to be calculated here, before the scenarios are conducted
 
 
-datalistrescue <- lapply(datalist, FUN = datapivot)
+poplistrescue <- lapply(poplist, FUN = datapivot)
+gradlistrescue <- lapply(gradmatchlist, FUN = datapivot)
+envlistrescue <- lapply(envmatchlist, FUN = datapivot)
+gradvarlistrescue <- lapply(gradvarlist, FUN = datapivot)
+envvarlistrescue <- lapply(envvarlist, FUN = datapivot)
+
+poplistrescuesum <- lapply(poplistrescue, summarize(across(DemographicDiff:MultipleDiff), .funs = function(x){mean(x, na.rm = TRUE)}))
+
+#test on a single df 
+summarize(poplistrescue[[2]], across(DemographicDiff:MultipleDiff), .funs = list(function(x){mean(x, na.rm = TRUE)}))
 
 
-poplistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Pop.Size"))
-gradlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Grad"))
-envlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Env"))
-gradvarlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Grad.Var"))
-envvarlistlistrescue <- lapply(datalistrescue, FUN = filter, (Variable == "Env.Var"))
+#Now we have to summarize the rescue differentials
+#get the column means and variances then plot
+
+
+
 
 ```
 
