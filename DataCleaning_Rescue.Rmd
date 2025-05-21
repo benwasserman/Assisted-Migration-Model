@@ -45,9 +45,18 @@ prerescuedatasubset <- function(x){
 
 #format grad and env match then pivot everything so that we have differentials between each type of rescue and the no-rescue scenario
 
-gradmatchlist <- a2ld(Gradmatcharray, 3)
-envmatchlist <- a2ld(Envmatcharray, 3)
 
+convert_to_number <- function(dataframe){
+  dataframe[["Value"]] <- as.numeric(dataframe[["Value"]])
+  return(dataframe)
+}
+
+gradmatchlist <- a2ld(Gradmatcharray, 3) %>% lapply(FUN = convert_to_number)
+envmatchlist <- a2ld(Envmatcharray, 3) %>% lapply(FUN = convert_to_number)
+
+
+
+#pivot everything so that we have differentials between each type of rescue and the no-rescue scenario
 datapivot <- function(df) {
   data.frame(df) %>% pivot_wider(names_from = Rescue, values_from = Value) %>% mutate(DemographicDiff = Demographic-None, GradDiff = Grad - None, GradEnvDiff = GradEnv - None, MultipleDiff = Multiple - None)
 }
@@ -59,19 +68,55 @@ envlistrescue <- lapply(envmatchlist, FUN = datapivot)
 gradvarlistrescue <- lapply(gradvarlist, FUN = datapivot)
 envvarlistrescue <- lapply(envvarlist, FUN = datapivot)
 
-poplistrescuesum <- lapply(poplistrescue, summarize(across(DemographicDiff:MultipleDiff), .funs = function(x){mean(x, na.rm = TRUE)}))
+#Recipient subsets
+#pre-allocate
+poplistrescue_recip <- vector("list", 3600)
+gradlistrescue_recip <- vector("list", 3600)
+envlistrescue_recip <- vector("list", 3600)
+gradvarlistrescue_recip <- vector("list", 3600)
+envvarlistrescue_recip <- vector("list", 3600)
 
-#test on a single df 
-summarize(poplistrescue[[2]], across(DemographicDiff:MultipleDiff), .funs = list(function(x){mean(x, na.rm = TRUE)}))
+#Recipient Subsets
+#This is more complicated than the for loop below because there are different recipients in each rescue
+for (i in 1:3600){
+  poplistrescue_recip[[i]] <- semi_join(poplistrescue[[i]],DRlistlist[[i]])
+}
+
+#The 5 sites that had the smallest population before rescue
+
+#Now we have to summarize the rescue differentials within each of these three subsets
 
 
-#Now we have to summarize the rescue differentials
 #get the column means and variances then plot
+
+sumdf <- function(df){
+  colMeans(df[,4:12], na.rm = TRUE)
+}
+
+poplistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(poplistrescue, FUN = sumdf, simplify = TRUE))))
+gradlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradlistrescue, FUN = sumdf, simplify = TRUE))))
+envlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envlistrescue, FUN = sumdf, simplify = TRUE))))
+gradvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradvarlistrescue, FUN = sumdf, simplify = TRUE))))
+envvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envvarlistrescue, FUN = sumdf, simplify = TRUE))))
 
 
 
 
 ```
+
+```{r tempplot}
+ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = DemographicDiff)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Demographic Difference") + theme_classic()
+
+ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = GradDiff)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Grad Difference") + theme_classic()
+
+ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = GradEnvDiff)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Grad/Env Difference") + theme_classic()
+
+ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = Multiple)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Multiple Difference") + theme_classic()
+
+###
+
+```
+
 
 ```{r saverescuedata}
 
