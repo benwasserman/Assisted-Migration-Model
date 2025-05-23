@@ -54,6 +54,15 @@ convert_to_number <- function(dataframe){
 gradmatchlist <- a2ld(Gradmatcharray, 3) %>% lapply(FUN = convert_to_number)
 envmatchlist <- a2ld(Envmatcharray, 3) %>% lapply(FUN = convert_to_number)
 
+#Identify extant populations and sum them
+extantfunc <- function(df){
+  df2 <- df %>% mutate(Variable = "Extant", Value2 = case_when(is.na(Value) ~ 0, Value == 0~0, Value > 0 ~ 1)) %>% select(-Value) %>% rename(Value = Value2)
+  return(df2)
+  }
+  
+
+
+extantlist <- lapply(poplist, FUN = extantfunc)
 
 
 #pivot everything so that we have differentials between each type of rescue and the no-rescue scenario
@@ -62,6 +71,7 @@ datapivot <- function(df) {
 }
 
 
+extantlistrescue <- lapply(extantlist, FUN = datapivot)
 poplistrescue <- lapply(poplist, FUN = datapivot)
 gradlistrescue <- lapply(gradmatchlist, FUN = datapivot)
 envlistrescue <- lapply(envmatchlist, FUN = datapivot)
@@ -70,6 +80,7 @@ envvarlistrescue <- lapply(envvarlist, FUN = datapivot)
 
 #Recipient subsets
 #pre-allocate
+extantlistrescue_recip <- vector("list", 3600)
 poplistrescue_recip <- vector("list", 3600)
 gradlistrescue_recip <- vector("list", 3600)
 envlistrescue_recip <- vector("list", 3600)
@@ -78,42 +89,121 @@ envvarlistrescue_recip <- vector("list", 3600)
 
 #Recipient Subsets
 #This is more complicated than the for loop below because there are different recipients in each rescue
-for (i in 1:3600){
-  poplistrescue_recip[[i]] <- semi_join(poplistrescue[[i]],DRlistlist[[i]])
-}
+#for (i in 1:3600){
+#  poplistrescue_recip[[i]] <- semi_join(poplistrescue[[i]],DRlistlist[[i]])
+#}
 
 #The 5 sites that had the smallest population before rescue
 
 #Now we have to summarize the rescue differentials within each of these three subsets
 
 
-#get the column means and variances then plot
+#get the column means/sum and variances then plot
 
 sumdf <- function(df){
+  colSums(df[,4:12], na.rm = TRUE)
+}
+
+meandf <- function(df){
   colMeans(df[,4:12], na.rm = TRUE)
 }
 
-poplistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(poplistrescue, FUN = sumdf, simplify = TRUE))))
-gradlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradlistrescue, FUN = sumdf, simplify = TRUE))))
-envlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envlistrescue, FUN = sumdf, simplify = TRUE))))
-gradvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradvarlistrescue, FUN = sumdf, simplify = TRUE))))
-envvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envvarlistrescue, FUN = sumdf, simplify = TRUE))))
+extantlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(extantlistrescue, FUN = sumdf, simplify = TRUE))))
+poplistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(poplistrescue, FUN = meandf, simplify = TRUE))))
+gradlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradlistrescue, FUN = meandf, simplify = TRUE))))
+envlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envlistrescue, FUN = meandf, simplify = TRUE))))
+gradvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradvarlistrescue, FUN = meandf, simplify = TRUE))))
+envvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envvarlistrescue, FUN = meandf, simplify = TRUE)))) 
+
+extantlistrescuecomb <-select(extantlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, MultipleDiff) %>% mutate(Variable = "Extant")
+poplistrescuecomb <-select(poplistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, MultipleDiff) %>% mutate(Variable = "Pop.Size")
+gradlistrescuecomb <-select(gradlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, MultipleDiff) %>% mutate(Variable = "Grad.Maladaptation")
+envlistrescuecomb <-select(envlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, MultipleDiff) %>% mutate(Variable = "Env.Maladaptation")
+gradvarlistrescuecomb <-select(gradvarlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, MultipleDiff) %>% mutate(Variable = "GradVar")
+envvarlistrescuecomb <-select(envvarlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, MultipleDiff) %>% mutate(Variable = "EnvVar")
+
+rescuecomb <- rbind(extantlistrescuecomb, poplistrescuecomb, gradlistrescuecomb, envlistrescuecomb, gradvarlistrescuecomb, envvarlistrescuecomb) %>% pivot_longer(cols = DemographicDiff:MultipleDiff, names_to = "Diff", values_to = "Value")
+
+#Analyses
+summary(lm(DemographicDiff~EnvType*I(log10(Mig+0.000001))*Sel, data = extantlistrescuesum))
 
 
+#Combine these into one 
 
+
+extantplot <- extantlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+popplot <- poplistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+gradplot <- gradlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+envplot <- envlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+gradvarplot <- gradvarlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+envvarplot <- envvarlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
 
 ```
 
 ```{r tempplot}
-ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = DemographicDiff)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Demographic Difference") + theme_classic()
 
-ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = GradDiff)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Grad Difference") + theme_classic()
+#Extant
+ggplot(data = extantplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = DemographicDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
 
-ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = GradEnvDiff)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Grad/Env Difference") + theme_classic()
+ggplot(data = extantplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
 
-ggplot(data = poplistrescuesum, aes(x = -log10(Mig+0.000001), y = -Omega2grad, fill = Multiple)) + geom_tile() + scale_fill_gradient2(low = 'red', mid = 'white', high = 'blue', midpoint = 0) + facet_grid(~EnvType) + ggtitle("Multiple Difference") + theme_classic()
+ggplot(data = extantplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradEnvDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
 
-###
+ggplot(data = extantplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
+
+#Pop
+
+ggplot(data = popplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = DemographicDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Population Size") + theme_classic()
+
+ggplot(data = popplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Population Size") + theme_classic()
+
+ggplot(data = popplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradEnvDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Population Size") + theme_classic()
+
+ggplot(data = popplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Population Size") + theme_classic()
+
+#gradmatch
+
+ggplot(data = gradplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = DemographicDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotype\nMismatch Size") + theme_classic()
+
+ggplot(data = gradplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotype\nMismatch") + theme_classic()
+
+ggplot(data = gradplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradEnvDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotype\nMismatch") + theme_classic()
+
+ggplot(data = gradplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotype\nMismatch") + theme_classic()
+
+#envmatch
+
+ggplot(data = envplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = DemographicDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotype\nMismatch") + theme_classic()
+
+ggplot(data = envplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotype\nMismatch") + theme_classic()
+
+ggplot(data = envplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradEnvDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotype\nMismatch") + theme_classic()
+
+ggplot(data = envplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotype\nMismatch") + theme_classic()
+
+#gradvar
+ggplot(data = gradvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = DemographicDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotypic\nVariance") + theme_classic()
+
+ggplot(data = gradvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotypic\nVariance") + theme_classic()
+
+ggplot(data = gradvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradEnvDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotypic\nVariance") + theme_classic()
+
+ggplot(data = gradvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Gradient\nPhenotypic\nVariance") + theme_classic()
+
+
+#envvar
+ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = DemographicDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotypic\nVariance") + theme_classic()
+
+ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Envrionment\nPhenotypic\nVariance") + theme_classic()
+
+ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = GradEnvDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotypic\nVariance") + theme_classic()
+
+ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotypic\nVariance") + theme_classic()
 
 ```
 
