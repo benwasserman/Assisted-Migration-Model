@@ -124,6 +124,8 @@ envvarlistrescuecomb <-select(envvarlistrescuesum, Sel, Mig, EnvType, Demographi
 
 rescuecomb <- rbind(extantlistrescuecomb, poplistrescuecomb, gradlistrescuecomb, envlistrescuecomb, gradvarlistrescuecomb, envvarlistrescuecomb) %>% pivot_longer(cols = DemographicDiff:MultipleDiff, names_to = "Diff", values_to = "Value")
 
+rescuecombplot <- rescuecomb %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>% summarize(Value = mean(Value, na.rm = TRUE), .groups = "keep")
+
 #Analyses
 summary(lm(DemographicDiff~EnvType*I(log10(Mig+0.000001))*Sel, data = extantlistrescuesum))
 
@@ -134,6 +136,9 @@ summary(lm(DemographicDiff~EnvType*I(log10(Mig+0.000001))*Sel, data = extantlist
 extantplot <- extantlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
 
 popplot <- poplistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+#Extant counted NAs as 0s, this corrects that based on the population size data
+extantplot[which(is.na(popplot), arr.ind = TRUE)]<-NA
 
 gradplot <- gradlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
 
@@ -206,7 +211,12 @@ ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Grad
 ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotypic\nVariance") + theme_classic()
 
 ```
+```{r rescuecombplots}
 
+ggplot(data = filter(rescuecombplot, Variable == "Extant"), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
+
+
+```
 
 ```{r saverescuedata}
 
