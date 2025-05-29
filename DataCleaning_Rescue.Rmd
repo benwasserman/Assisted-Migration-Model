@@ -33,6 +33,8 @@ There are 3 types of comparisons worth making:
 2. Comparing the (5) demes with the smallest nonzero population size between no rescue and rescue - did the effect the most marginal demes in the metapopulation
 3. Comparing the (5) demes that received supplementation between no rescue and rescue - did the target demes benefit? 
 
+So far this only implements #1
+
 ```{r functions}
 #Find the data at time point 499, just before rescue occurs
 prerescuedatasubset <- function(x){
@@ -211,16 +213,17 @@ ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Grad
 ggplot(data = envvarplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = MultipleDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Environment\nPhenotypic\nVariance") + theme_classic()
 
 ```
+
 ```{r rescuecombplots}
 
-ggplot(data = filter(rescuecombplot, Variable == "Extant"), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
+#(data = filter(rescuecombplot, Variable == "Extant"), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
 
 
 ```
 
 ```{r saverescuedata}
 
-save.image("RescueData.Rdata")
+#save.image("RescueData.Rdata")
 
 ```
 
