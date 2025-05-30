@@ -150,9 +150,17 @@ gradvarplot <- gradvarlistrescuesum %>% summarize(across(DemographicDiff:Multipl
 
 envvarplot <- envvarlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
 
+#further reduced
+extantplotmig <- extantlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, MuMovement))
+
+extantplotsel <- extantlistrescuesum %>% summarize(across(DemographicDiff:MultipleDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Sel, Omega2grad))
+
 ```
 
 ```{r tempplot}
+
+#Extantmig
+ggplot(data = filter(rescuecomb, Variable == ), aes(x = log10(Mig+0.000001), y = )
 
 #Extant
 ggplot(data = extantplot, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = DemographicDiff_mean)) + geom_tile() + scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + facet_grid(~EnvType) + ggtitle("Populations Extant") + theme_classic()
