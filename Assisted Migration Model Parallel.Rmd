@@ -344,13 +344,14 @@ return(u)
 
 #Rescue a function that moves some individuals around
 #inputs: p is the POPS population array
-#strategy is the type of genetic rescue strategy to use, below are the 5 options
+#strategy is the type of genetic rescue strategy to use, below are the 6 options
 #None: no rescue
 #Demographic:  rescue from the geographically closest single population
 #Grad: rescue based on the closest population to the ending value of Grad
 #GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
 #Multiple: rescue based on a mix of 5 local populations
 #The last parameter is donrecplist: a 2d matrix with 2 columns. The first column is the IDs of donors, the second column is the IDs of recipients. The matrix will have 1 row per recipient population, unless strategy = "Multiple" then it will have (RescueSourceNumber x the number of recipient populations) rows.
+#Phenotype: rescue based on the population whose phenotype, rather than site, has the closest value to the ending values of Grand and Env (bivariate distance). This is meant as a theoretical limit on how good a match we can create. It's unlikely to be a practical strategy in real life.
 
 #2024/01/27 I changed parameter q to q2 because I was wondering if the alias of quit: q was causing problems, but I actually think it was one place where I was calling POPsim by mistake where I should've been calling q
 
@@ -403,6 +404,8 @@ donorrecipientsbase <- function(q2, strategies, NumRescueSites, LANDfuture, LAND
     } else if (strategies[[1]][qi] == "Multiple") {
         drmat[,(1+qi):dim(drmat)[2]] <- matrix(eligibledonors[knnx.index(eligibledonors, drmat[,1], k = min(NumRescueSources, length(eligibledonors), na.rm = TRUE))], nrow = nrow(drmat), ncol = NumRescueSources, byrow = FALSE)
         colnames(drmat)[(1+qi):dim(drmat)[2]] <- rep(strategies[[1]][[qi]], NumRescueSources)
+    } else if (strategies[[1]][qi] == "Phenotype") {
+      
     }
       
        
