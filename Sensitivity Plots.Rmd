@@ -1,0 +1,251 @@
+---
+title: "Sensitivity Plots"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+2023-12-04. Over the Thanksgiving break, I ran a bunch of time-consuming simulation models to see the sensitivity to parameters for selection coefficient, migration rate, and MuOffspring (birth rate). This script will combine some of the outputs of those graphics so we can decide how to move forward.
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(ggpubr)
+
+```
+
+```{r}
+filenames <- c("Outputs/Sensitivity/NoRescue2023_11_29a.Rdata", "Outputs/Sensitivity/NoRescue2023_11_29b.Rdata", "Outputs/Sensitivity/NoRescue2023_11_29c.Rdata", "Outputs/Sensitivity/NoRescue2023_11_28a.Rdata", "Outputs/Sensitivity/NoRescue2023_11_28b.Rdata", "Outputs/Sensitivity/NoRescue2023_11_28b.Rdata", "Outputs/Sensitivity/NoRescue2023_11_29d.Rdata", "Outputs/Sensitivity/NoRescue2023_11_29e.Rdata", "Outputs/Sensitivity/NoRescue2023_11_29f.Rdata")
+
+plotdatalist <- vector(mode='list', length=9)
+
+for (i in 1:length(plotdatalist)){
+  
+  load(filenames[i])
+  #Calculate means
+  means <- apply(MigSel, MARGIN = c(1,3), FUN = mean, na.rm = TRUE)
+  popmeans <- means[1,]
+  gradmeans <- means[2,]
+  envmeans <- means[3,]
+  gradvars <- means[4,]
+  envvars <- means[5,]
+  plotdatalist[[i]] <- data.frame(Mig = MigSelvals$Mig, Sel = MigSelvals$Sel, Envmode = MigSelvals$Envmode, popmeans, gradmeans, envmeans, gradvars, envvars)
+
+}
+
+#popmeans
+popmeans1fixed <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans2fixed <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans3fixed <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans4fixed <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans5fixed <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans6fixed <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans7fixed <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans8fixed <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans9fixed <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans1variable <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans2variable <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans3variable <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans4variable <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans5variable <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans6variable <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans7variable <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans8variable <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+popmeans9variable <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = popmeans)) + scale_fill_viridis(limits = c(0,500)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+pdf(file = "Outputs/Sensitivity/NoRescuePopMeans.pdf", height = 9, width = 6.5)
+ggpubr:::ggarrange(plotlist = list(popmeans1fixed, popmeans1variable, popmeans2fixed, popmeans2variable, popmeans3fixed, popmeans3variable, popmeans4fixed, popmeans4variable, popmeans5fixed, popmeans5variable, popmeans6fixed, popmeans6variable, popmeans7fixed, popmeans7variable, popmeans8fixed, popmeans8variable, popmeans9fixed, popmeans9variable), ncol = 2, nrow = 9, common.legend = TRUE)
+dev.off()
+
+#gradmeans
+gradmeans1fixed <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans2fixed <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans3fixed <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans4fixed <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans5fixed <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans6fixed <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans7fixed <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans8fixed <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans9fixed <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans1variable <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans2variable <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans3variable <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans4variable <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans5variable <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans6variable <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans7variable <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans8variable <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradmeans9variable <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradmeans)) + scale_fill_viridis(limits = c(-3,2)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+pdf(file = "Outputs/Sensitivity/NoRescueGradMeans.pdf", height = 9, width = 6.5)
+ggpubr:::ggarrange(plotlist = list(gradmeans1fixed, gradmeans1variable, gradmeans2fixed, gradmeans2variable, gradmeans3fixed, gradmeans3variable, gradmeans4fixed, gradmeans4variable, gradmeans5fixed, gradmeans5variable, gradmeans6fixed, gradmeans6variable, gradmeans7fixed, gradmeans7variable, gradmeans8fixed, gradmeans8variable, gradmeans9fixed, gradmeans9variable), ncol = 2, nrow = 9, common.legend = TRUE)
+dev.off()
+
+#envmeans
+envmeans1fixed <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans2fixed <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans3fixed <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans4fixed <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans5fixed <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans6fixed <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans7fixed <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans8fixed <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans9fixed <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans1variable <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans2variable <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans3variable <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans4variable <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans5variable <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans6variable <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans7variable <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans8variable <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envmeans9variable <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envmeans)) + scale_fill_viridis(limits = c(-12,10)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+pdf(file = "Outputs/Sensitivity/NoRescueEnvMeans.pdf", height = 9, width = 6.5)
+ggpubr:::ggarrange(plotlist = list(envmeans1fixed, envmeans1variable, envmeans2fixed, envmeans2variable, envmeans3fixed, envmeans3variable, envmeans4fixed, envmeans4variable, envmeans5fixed, envmeans5variable, envmeans6fixed, envmeans6variable, envmeans7fixed, envmeans7variable, envmeans8fixed, envmeans8variable, envmeans9fixed, envmeans9variable), ncol = 2, nrow = 9, common.legend = TRUE)
+dev.off()
+
+#gradvars
+gradvars1fixed <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars2fixed <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars3fixed <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars4fixed <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars5fixed <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars6fixed <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars7fixed <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars8fixed <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars9fixed <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars1variable <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars2variable <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars3variable <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars4variable <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars5variable <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars6variable <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars7variable <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars8variable <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+gradvars9variable <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = gradvars)) + scale_fill_viridis(limits = c(0,2.5)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+pdf(file = "Outputs/Sensitivity/NoRescueGradVars.pdf", height = 9, width = 6.5)
+ggpubr:::ggarrange(plotlist = list(gradvars1fixed, gradvars1variable, gradvars2fixed, gradvars2variable, gradvars3fixed, gradvars3variable, gradvars4fixed, gradvars4variable, gradvars5fixed, gradvars5variable, gradvars6fixed, gradvars6variable, gradvars7fixed, gradvars7variable, gradvars8fixed, gradvars8variable, gradvars9fixed, gradvars9variable), ncol = 2, nrow = 9, common.legend = TRUE)
+dev.off()
+
+#EnvVars
+envvars1fixed <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars2fixed <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars3fixed <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars4fixed <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars5fixed <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars6fixed <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars7fixed <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars8fixed <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars9fixed <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Fixed"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars1variable <- ggplot(data = filter(plotdatalist[[1]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars2variable <- ggplot(data = filter(plotdatalist[[2]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars3variable <- ggplot(data = filter(plotdatalist[[3]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars4variable <- ggplot(data = filter(plotdatalist[[4]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars5variable <- ggplot(data = filter(plotdatalist[[5]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars6variable <- ggplot(data = filter(plotdatalist[[6]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars7variable <- ggplot(data = filter(plotdatalist[[7]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars8variable <- ggplot(data = filter(plotdatalist[[8]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+envvars9variable <- ggplot(data = filter(plotdatalist[[9]], Envmode == "Variable"), aes(x = (1.000001-Mig), y = (11-Sel))) + geom_raster(aes(fill = envvars)) + scale_fill_viridis(limits = c(0,50)) + scale_x_continuous(breaks = c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01"), trans = "log10") + xlab("Proportion Migrants") + ylab("Selection Strength") + theme_classic()
+
+pdf(file = "Outputs/Sensitivity/NoRescueEnvVars.pdf", height = 9, width = 6.5)
+ggpubr:::ggarrange(plotlist = list(envvars1fixed, envvars1variable, envvars2fixed, envvars2variable, envvars3fixed, envvars3variable, envvars4fixed, envvars4variable, envvars5fixed, envvars5variable, envvars6fixed, envvars6variable, envvars7fixed, envvars7variable, envvars8fixed, envvars8variable, envvars9fixed, envvars9variable), ncol = 2, nrow = 9, common.legend = TRUE)
+dev.off()
+```
+
+```{}
+
+
