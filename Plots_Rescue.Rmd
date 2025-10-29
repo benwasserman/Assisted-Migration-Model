@@ -1,0 +1,27 @@
+---
+title: "Plots_RescueData"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(viridis)
+library(ggpubr)
+library(colorspace)
+library(grid)
+library(gdata)
+library(str2str)
+library(parallel)
+library(beepr)
+
+```
+
+```{r loaddata}
+
+load("RescueData.Rdata")
+```

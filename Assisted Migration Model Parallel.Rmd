@@ -63,7 +63,7 @@ filter <- FALSE
 
 
 #Set values for all possible combinations of the input variables
-Paramdfsingle <- expand.grid(RunID = "Z_2025_04_22", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Multiple")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
+Paramdfsingle <- expand.grid(RunID = "Z_2025_04_22", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Phenotype", "Multiple")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
 #Test by removing one mode at a time to see if one particular mode stops things
 #c("None", "Demographic", "Grad", "GradEnv", "Multiple")
 #leaving out None threw no errors
@@ -344,13 +344,14 @@ return(u)
 
 #Rescue a function that moves some individuals around
 #inputs: p is the POPS population array
-#strategy is the type of genetic rescue strategy to use, below are the 5 options
+#strategy is the type of genetic rescue strategy to use, below are the 6 options
 #None: no rescue
 #Demographic:  rescue from the geographically closest single population
 #Grad: rescue based on the closest population to the ending value of Grad
 #GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
 #Multiple: rescue based on a mix of 5 local populations
 #The last parameter is donrecplist: a 2d matrix with 2 columns. The first column is the IDs of donors, the second column is the IDs of recipients. The matrix will have 1 row per recipient population, unless strategy = "Multiple" then it will have (RescueSourceNumber x the number of recipient populations) rows.
+#Phenotype: rescue based on the population whose phenotype, rather than site, has the closest value to the ending values of Grand and Env (bivariate distance). This is meant as a theoretical limit on how good a match we can create. It's unlikely to be a practical strategy in real life.
 
 #2024/01/27 I changed parameter q to q2 because I was wondering if the alias of quit: q was causing problems, but I actually think it was one place where I was calling POPsim by mistake where I should've been calling q
 
@@ -400,10 +401,13 @@ donorrecipientsbase <- function(q2, strategies, NumRescueSites, LANDfuture, LAND
     } else if (strategies[[1]][qi] == "GradEnv") {
         drmat[,1+qi] <- sapply(t(drmat[,1]), function(a, b,c, d) {b[max.col(matrix(1/(as.matrix(dist(rbind(c[a,], d[b,])))[-1,1]), nrow = 1))]}, b = eligibledonors, c = LANDfuture, d = LANDstarting)
         colnames(drmat)[1+qi] <- strategies[[1]][qi]
+    } else if (strategies[[1]][qi] == "Phenotype") {
+      drmat[,1+qi] <- sapply(t(drmat[,1]), function(a, b,c, d) {b[max.col(matrix(1/(as.matrix(dist(rbind(c[a,], d[b,])))[-1,1]), nrow = 1))]}, b = eligibledonors, c = LANDfuture, d = data.frame(Grad = colMeans(q2[,7,], na.rm = TRUE), Env = colMeans(q2[,8,],na.rm=TRUE)))
+      colnames(drmat)[1+qi] <- strategies[[1]][qi]
     } else if (strategies[[1]][qi] == "Multiple") {
         drmat[,(1+qi):dim(drmat)[2]] <- matrix(eligibledonors[knnx.index(eligibledonors, drmat[,1], k = min(NumRescueSources, length(eligibledonors), na.rm = TRUE))], nrow = nrow(drmat), ncol = NumRescueSources, byrow = FALSE)
         colnames(drmat)[(1+qi):dim(drmat)[2]] <- rep(strategies[[1]][[qi]], NumRescueSources)
-    }
+    } 
       
        
   }
