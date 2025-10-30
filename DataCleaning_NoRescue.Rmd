@@ -38,7 +38,7 @@ datasubset <- function(x){
 
 #nameslist <- c("A_2024_03_22", "B_2024_03_23", "C_2024_03_23", "D_2024_03_23", "E_2024_03_24", "F_2024_03_24", "G_2024_03_24", "H_2024_03_24", "J_2025_04_01", "K_2025_04_01", "L_2025_04_02", "M_2025_04_03", "N_2025_04_04", "O_2025_04_07", "P_2025_04_08", "Q_2025_04_09",  "R_2025_04_10", "S_2025_04_10", "T_2025_04_11", "U_2025_04_11", "V_2025_04_15", "W_2025_04_16", "X_2025_04_17", "Y_2025_04_21", "Z_2025_04_22")
 
-nameslist <- c("Test_6th_rescue_strategy_2025_10_29")
+nameslist <- c("Test_6th_rescue_strategy_2025_10_29", "A_2025_10_29", "B_2025_10_30")
 
 #So There was an I dataset, but it was missing data for a single iteration out of the 120. Out of an abundance of caution I'm replacing the whole thing with the Z dataset 
 
@@ -49,9 +49,9 @@ for (i in 1:length(nameslist)) {
   Paramdfcombined[[i]] <- Paramdf
   results_mclapplycombined[[i]] <- results_mclapply
 }
-#Paramdfall <- ld2d(Paramdfcombined)
+Paramdfall <- ld2d(Paramdfcombined)
 #Commented out the line above, because in this case, with one list, we can just use Paramdfcombined
-Paramdfall <- Paramdfcombined[[1]]
+#Paramdfall <- Paramdfcombined[[1]]
 
 #A-Z (minus I) is 30 iterations, 120x30 = 3600 rows
 nrow(Paramdfall)
