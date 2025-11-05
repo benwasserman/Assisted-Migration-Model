@@ -1,0 +1,46 @@
+---
+title: "Regressions"
+author: "Ben Wasserman"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(car)
+library(tidyverse)
+```
+
+
+```{r loaddata}
+load("RescueData.Rdata")
+```
+
+```{r norescue}
+
+names(Paramdfall)
+
+Extant_GLM <- glm(cbind(Extant_None,50-Extant_None)~EnvType*Sel*Mig, family = "binomial", data = Paramdfall)
+summary(Extant_GLM)
+Extant_GLM_log <- glm(cbind(Extant_None,50-Extant_None)~EnvType*Sel*log10(Mig+0.000001), family = "binomial", data = Paramdfall)
+summary(Extant_GLM_log)
+#This model has the best AIC of these
+
+
+Extant_GLM_MuMovement <- glm(cbind(Extant_None,50-Extant_None)~EnvType*Sel*MuMovement, family = "binomial", data = Paramdfall)
+summary(Extant_GLM_MuMovement)
+
+Extant_GLM_MuMovement_log <- glm(cbind(Extant_None,50-Extant_None)~EnvType*Sel*log10(MuMovement), family = "binomial", data = Paramdfall)
+summary(Extant_GLM_MuMovement_log)
+
+
+plot(Extant_GLM)
+plot(Extant_GLM_log)
+
+```
+
+```{r rescue}
+
+
+```
