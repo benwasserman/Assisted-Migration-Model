@@ -63,7 +63,7 @@ filter <- FALSE
 
 
 #Set values for all possible combinations of the input variables
-Paramdfsingle <- expand.grid(RunID = "AA_2025_11_08", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Phenotype", "Multiple")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
+Paramdfsingle <- expand.grid(RunID = "AB_2025_11_08", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Phenotype", "Multiple")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
 #Test by removing one mode at a time to see if one particular mode stops things
 #c("None", "Demographic", "Grad", "GradEnv", "Multiple")
 #leaving out None threw no errors
