@@ -36,9 +36,9 @@ datasubset <- function(x){
 
 #Note the parallel processing here is going to be rewritten to be used on a windows machine, but the model itself was run on mac
 
-#nameslist <- c("A_2024_03_22", "B_2024_03_23", "C_2024_03_23", "D_2024_03_23", "E_2024_03_24", "F_2024_03_24", "G_2024_03_24", "H_2024_03_24", "J_2025_04_01", "K_2025_04_01", "L_2025_04_02", "M_2025_04_03", "N_2025_04_04", "O_2025_04_07", "P_2025_04_08", "Q_2025_04_09",  "R_2025_04_10", "S_2025_04_10", "T_2025_04_11", "U_2025_04_11", "V_2025_04_15", "W_2025_04_16", "X_2025_04_17", "Y_2025_04_21", "Z_2025_04_22")
+nameslist <- c("A_2025_10_29", "B_2025_10_30", "C_2025_10_30", "D_2025_10_30", "E_2025_10_30", "F_2025_10_31", "G_2025_10_31", "H_2025_11_01", "I_2025_11_01", "J_2025_11_02", "K_2025_11_02", "L_2025_11_02", "M_2025_11_03", "N_2025_11_04", "O_2025_11_04", "P_2025_11_05", "Q_2025_11_05", "R_2025_11_06", "S_2025_11_06", "T_2025_11_06", "U_2025_11_07", "V_2025_11_07", "W_2025_11_07", "X_2025_11_08", "Y_2025_11_08", "Z_2025_11_08", "AA_2025_11_08", "AB_2025_11_08", "AC_2025_11_08", "AD_2025_11_08")
 
-nameslist <- c("Test_6th_rescue_strategy_2025_10_29", "A_2025_10_29", "B_2025_10_30")
+#nameslist <- c("Test_6th_rescue_strategy_2025_10_29", "A_2025_10_29", "B_2025_10_30")
 
 #So There was an I dataset, but it was missing data for a single iteration out of the 120. Out of an abundance of caution I'm replacing the whole thing with the Z dataset 
 
@@ -113,7 +113,7 @@ Gradmatcharray[,5,] <- as.numeric(Gradmatcharray[,5,]) - rbind(landarrayending[,
 Envmatcharray <- envarray
 Envmatcharray[,5,] <- as.numeric(Envmatcharray[,5,]) - rbind(landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,])
 
-
+  
 Paramdfall$Extant_None <- apply(matrix(as.numeric(poparray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = function(x) {sum(x>0, na.rm = TRUE)})
 Paramdfall$PopSize_None <- apply(matrix(as.numeric(poparray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
 Paramdfall$Maladapt.Grad_None <- apply(matrix(as.numeric(Gradmatcharray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = mean, na.rm = TRUE)
@@ -126,8 +126,8 @@ Paramsum <- Paramdfall %>% dplyr::summarize(across(Extant_None:EnvVar_None, .fns
 Paramsum$Extant_None_mean[which(Paramsum$Extant_None_mean==0)]<-NA
 Paramsum$PopSize_None_mean[which(Paramsum$PopSize_None_mean==0)]<-NA
 
-#save.image("loadedFullList.Rdata")
-save.image("loadedPhenotypeTestList.Rdata")
+save.image("loadedFullListUpdated.Rdata")
+#save.image("loadedPhenotypeTestList.Rdata")
 beep(sound = 6)
 
 ```
