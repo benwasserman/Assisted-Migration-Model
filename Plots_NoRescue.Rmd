@@ -111,6 +111,11 @@ pdf(file = "./Outputs/V3 Figures/nonesplot2025_11_10.pdf", height = 10, width = 
 nonesplot2
 dev.off()
 
+
+ggsave(nonesplot2, filename = "./Outputs/V3 Figures/nonesplot2025_11_10.wmf", height = 10, width = 7.5, units = "in")
+
+ggsave(nonesplot2, filename = "./Outputs/V3 Figures/nonesplot2025_11_10.png", height = 10, width = 7.5, units = "in")
+
 ```
 
 ```{r envmaladapt}
