@@ -58,12 +58,34 @@ Anova(Maladapt.Grad_GLM_log)
 
 AIC(Maladapt.Grad_GLM, Maladapt.Grad_GLM_log)
 
+Maladapt.Env_GLM_log <- glm(Maladapt.Env_None~EnvType*Sel*log10(Mig+0.000001), family = "gaussian", data = Paramdfall)
+summary(Maladapt.Env_GLM_log)
 
 
+Gradvar_GLM_lg <- glm()
 
 ```
 
 ```{r rescue}
 
+hist(filter(rescuecomb, Variable == "Extant")$Value)
+extant_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Extant")) 
+summary(extant_rescuelm)
+plot(extant_rescuelm)
+
+hist(filter(rescuecomb, Variable == "Pop.Size")$Value)
+popsize_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Pop.Size")) 
+summary(popsize_rescuelm)
+plot(popsize_rescuelm)
+
+hist(filter(rescuecomb, Variable =="Grad.Maladaptation")$Value)
+gradmal_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Grad.Maladaptation")) 
+summary(gradmal_rescuelm)
+plot(gradmal_rescuelm)
+
+hist(filter(rescuecomb, Variable =="Env.Maladaptation")$Value)
+envmal_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Env.Maladaptation")) 
+summary(envmal_rescuelm)
+plot(envmal_rescuelm)
 
 ```
