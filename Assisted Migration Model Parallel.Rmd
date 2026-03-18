@@ -319,7 +319,7 @@ reproducedispersebase <- function(u, L, Si, K, MuMovement, funct2) {
       mutations[which(mutations==1)] <-rnorm(n = sum(mutations), mean = 0, sd = 0.0005)
       offspringretained[,12:(11+2*L)]<- offspringretained[,12:(11+2*L)]+mutations
       
-      
+     
       #This is the basis for how we'll call the empty spaces to put the offspring in 
       
       #this should be all the empty spots we need, and we will fill it with the values from offspringretained
