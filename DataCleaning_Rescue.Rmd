@@ -26,7 +26,8 @@ library(officer)
 
 
 ```{r loaddata}
-load("loadedFullListUpdated.Rdata")
+#load("loadedFullListUpdated.Rdata")
+load("loadedMutationTestList.Rdata")
 ```
 
 There are 3 types of comparisons worth making:
@@ -237,6 +238,7 @@ poplistrescueprerecipsumbyparameter <- poplistrescueprerecipsum %>% group_by(Mig
 ```
 
 ```{r savedata}
-save.image("RescueDataUpdated.Rdata")
+#save.image("RescueDataUpdated.Rdata")
+save.image("RescueDataMutationTest.Rdata")
 ```
 

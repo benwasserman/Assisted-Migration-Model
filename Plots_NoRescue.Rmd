@@ -25,8 +25,9 @@ library(beepr)
 
 
 ```{r loaddata}
-load("loadedFullListUpdated.Rdata")
+#load("loadedFullListUpdated.Rdata")
 #load("loadedPhenotypeTestList.Rdata")
+load("loadedMutationTestList.Rdata")
 ```
 
 ```{r nonesplot}
@@ -109,21 +110,21 @@ envvarplot <- ggarrange(envvarfixed, envvarvariable, nrow = 1, legend = 'right',
 
 nonesplot <- ggarrange(explot, popplot, gradplot, envplot, gradvarplot, envvarplot, ncol = 1)
 nonesplot2 <- annotate_figure(nonesplot, left = textGrob("Selection Strength (1/omega^2)", rot = 90, vjust = 1, gp = gpar(cex=1)), bottom = textGrob("Proportion Migrants", vjust= -0.25, gp = gpar(cex=1)), top = textGrob("Fixed Environment                       Variable Environment", gp = gpar(cex = 1)))
-pdf(file = "./Outputs/V3 Figures/nonesplot2025_11_24.pdf", height = 10, width = 7.5)
+pdf(file = "./Outputs/V4 Figures/nonesplotMutationTest2026_03_19.pdf", height = 10, width = 7.5)
 nonesplot2
 dev.off()
 
 
-ggsave(nonesplot2, filename = "./Outputs/V3 Figures/nonesplot2025_11_24.wmf", height = 10, width = 7.5, units = "in")
+#ggsave(nonesplot2, filename = "./Outputs/V4 Figures/nonesplotMutationTest2026_03_19.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(nonesplot2, filename = "./Outputs/V3 Figures/nonesplot2025_11_24.png", height = 10, width = 7.5, units = "in")
+ggsave(nonesplot2, filename = "./Outputs/V4 Figures/nonesplotMutationTest2026_03_19.png", height = 10, width = 7.5, units = "in")
 
 ```
 
 ```{r envmaladapt}
 Paramsum2 <- Paramsum %>% mutate(EnvLCI = Maladapt.Env_None_mean - qnorm(0.975)* Maladapt.Env_None_sd/sqrt(30), EnvUCI =  Maladapt.Env_None_mean + qnorm(0.975)* Maladapt.Env_None_sd/sqrt(30), Overlap0 = ((EnvLCI<=0)&(EnvUCI>=0)))
 
-write.csv(Paramsum2, "./Outputs/V3 Figures/LoadedFulllistUpdatedParamsum.csv")
+write.csv(Paramsum2, "./Outputs/V4 Figures/LoadedMutationTestlistUpdatedParamsum.csv")
 
 ```
 

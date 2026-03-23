@@ -23,7 +23,8 @@ library(beepr)
 
 ```{r loaddata}
 
-load("RescueDataUpdated.Rdata")
+#load("RescueDataUpdated.Rdata")
+load("RescueDataMutationTest.Rdata")
 ```
 
 ```{r plotallpops}
@@ -57,16 +58,21 @@ fevplot <- ggplot(data = filter(rescuecombplot, ((EnvType == "Fixed")&(Variable 
 fixedplot <- ggarrange(fexplot, fpsplot, fgmplot, femplot, fgvplot, fevplot, ncol = 1)
 fixedplot2 <- annotate_figure(fixedplot, left = textGrob("Selection Strength (1/omega^2)", rot = 90, vjust = 1, gp = gpar(cex=1)), bottom = textGrob("Proportion Migrants", vjust= -0.25, gp = gpar(cex = 1)), top = textGrob("All Populations Averaged, Fixed Environment", gp = gpar(cex=1)))
 
-ggsave(fixedplot2, filename = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
+#ggsave(fixedplot2, filename = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(fixedplot2, filename = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest_updated_2026_03_19.wmf", height = 10, width = 7.5, units = "in")
+
+ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest_updated_2026_03_19.png", height = 10, width = 7.5, units = "in")
 
 
   
-pdf(file = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#pdf(file = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#fixedplot2
+#dev.off()
+
+pdf(file = "./Outputs/V4 Figures/diffplot_fixed_mutationtest_updated_2026_03_19.pdf", height = 10, width = 7.5)
 fixedplot2
 dev.off()
-
 
 
 #Variable Environment  
@@ -87,11 +93,19 @@ variableplot <- ggarrange(vexplot, vpsplot, vgmplot, vemplot, vgvplot, fevplot, 
 variableplot2 <- annotate_figure(variableplot, left = textGrob("Selection Strength (1/omega^2)", rot = 90, vjust = 1, gp = gpar(cex=1)), bottom = textGrob("Proportion Migrants", vjust= -0.25, gp = gpar(cex = 1)), top = textGrob("All Populations Averaged, Variable Environment", gp = gpar(cex=1))) + theme(axis.text.y = element_text(size = xsmalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1), legend.title=element_text(size = lgtxtsize), legend.text = element_text(size = smalltxtsize), legend.key.width = unit(keywidth, "lines"), legend.key.height = unit(keyheight, "lines"), strip.text = element_text(size = xsmalltxtsize, color = 'white'), strip.background = element_rect(color = 'white'))
 
 
-ggsave(variableplot2, filename = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
+#ggsave(variableplot2, filename = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2, filename = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest_updated_2026_03_19.wmf", height = 10, width = 7.5, units = "in")
+
+#ggsave(variableplot2, filename = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.png", height = 10, width = 7.5, units = "in")
+
+ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest_updated_2026_03_19.png", height = 10, width = 7.5, units = "in")
   
-pdf(file = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#pdf(file = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#variableplot2
+#dev.off()
+
+pdf(file = "./Outputs/V3 Figures/diffplot_variable_mutationtest_updated_2026_03_19.pdf", height = 10, width = 7.5)
 variableplot2
 dev.off()
 
