@@ -24,7 +24,7 @@ library(beepr)
 ```{r loaddata}
 
 #load("RescueDataUpdated.Rdata")
-load("RescueDataMutationTest.Rdata")
+load("RescueDataMutationTest3.Rdata")
 ```
 
 ```{r plotallpops}
@@ -60,9 +60,9 @@ fixedplot2 <- annotate_figure(fixedplot, left = textGrob("Selection Strength (1/
 
 #ggsave(fixedplot2, filename = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest_updated_2026_03_19.wmf", height = 10, width = 7.5, units = "in")
+#ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest2_updated_2026_03_29.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest_updated_2026_03_19.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest3_updated_2026_03_29.png", height = 10, width = 7.5, units = "in")
 
 
   
@@ -70,7 +70,7 @@ ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest_
 #fixedplot2
 #dev.off()
 
-pdf(file = "./Outputs/V4 Figures/diffplot_fixed_mutationtest_updated_2026_03_19.pdf", height = 10, width = 7.5)
+pdf(file = "./Outputs/V4 Figures/diffplot_fixed_mutationtest3_updated_2026_03_29.pdf", height = 10, width = 7.5)
 fixedplot2
 dev.off()
 
@@ -95,17 +95,17 @@ variableplot2 <- annotate_figure(variableplot, left = textGrob("Selection Streng
 
 #ggsave(variableplot2, filename = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest_updated_2026_03_19.wmf", height = 10, width = 7.5, units = "in")
+#ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest2_updated_2026_03_29.wmf", height = 10, width = 7.5, units = "in")
 
 #ggsave(variableplot2, filename = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.png", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest_updated_2026_03_19.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest3_updated_2026_03_29.png", height = 10, width = 7.5, units = "in")
   
 #pdf(file = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #variableplot2
 #dev.off()
 
-pdf(file = "./Outputs/V3 Figures/diffplot_variable_mutationtest_updated_2026_03_19.pdf", height = 10, width = 7.5)
+pdf(file = "./Outputs/V4 Figures/diffplot_variable_mutationtest3_updated_2026_03_29.pdf", height = 10, width = 7.5)
 variableplot2
 dev.off()
 
@@ -135,13 +135,20 @@ fevplot_recip <- ggplot(data = filter(rescue_recipcombplot, ((EnvType == "Fixed"
 fixedplot_recip <- ggarrange(fexplot_recip, fpsplot_recip, fgmplot_recip, femplot_recip, fgvplot_recip, fevplot_recip, ncol = 1)
 fixedplot2_recip <- annotate_figure(fixedplot_recip, left = textGrob("Selection Strength (1/omega^2)", rot = 90, vjust = 1, gp = gpar(cex=1)), bottom = textGrob("Proportion Migrants", vjust= -0.25, gp = gpar(cex = 1)), top = textGrob("Recipient Populations Only, Fixed Environment", gp = gpar(cex=1)))
 
-ggsave(fixedplot2_recip, filename = "./Outputs/V3 Figures/diffplot_fixed_recipientsonly_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
+#ggsave(fixedplot2_recip, filename = "./Outputs/V3 Figures/diffplot_fixed_recipientsonly_updated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(fixedplot2_recip, filename = "./Outputs/V3 Figures/diffplot_fixed_recipientsonly_updated_2025_11_24.png", height = 10, width = 7.5, units = "in")
+#ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest2_recipientsonly_updated_2026_03_29.wmf", height = 10, width = 7.5, units = "in")
 
+#ggsave(fixedplot2_recip, filename = "./Outputs/V3 Figures/diffplot_fixed_recipientsonly_updated_2025_11_24.png", height = 10, width = 7.5, units = "in")
+
+ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_mutationtest3_recipientsonly_updated_2026_03_29.png", height = 10, width = 7.5, units = "in")
 
   
-pdf(file = "./Outputs/V3 Figures/diffplot_fixed_recipientsonly_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#pdf(file = "./Outputs/V3 Figures/diffplot_fixed_recipientsonly_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#fixedplot2_recip
+#dev.off()
+
+pdf(file = "./Outputs/V4 Figures/diffplot_fixed_mutationtest3_recipientsonly_updated_2026_03_29.pdf", height = 10, width = 7.5)
 fixedplot2_recip
 dev.off()
 
@@ -163,15 +170,21 @@ variableplot_recip <- ggarrange(vexplot_recip, vpsplot_recip, vgmplot_recip, vem
 variableplot2_recip <- annotate_figure(variableplot_recip, left = textGrob("Selection Strength (1/omega^2)", rot = 90, vjust = 1, gp = gpar(cex=1)), bottom = textGrob("Proportion Migrants", vjust= -0.25, gp = gpar(cex = 1)), top = textGrob("Recipient Populations Only, Variable Environment", gp = gpar(cex=1))) + theme(axis.text.y = element_text(size = xsmalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1), legend.title=element_text(size = lgtxtsize), legend.text = element_text(size = smalltxtsize), legend.key.width = unit(keywidth, "lines"), legend.key.height = unit(keyheight, "lines"), strip.text = element_text(size = xsmalltxtsize))
 
 
-ggsave(variableplot2_recip, filename = "./Outputs/V3 Figures/diffplot_variable_recipientsonlyupdated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
+#ggsave(variableplot2_recip, filename = "./Outputs/V3 Figures/diffplot_variable_recipientsonlyupdated_2025_11_24.wmf", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2_recip, filename = "./Outputs/V3 Figures/diffplot_variable_recipientsonlyupdated_2025_11_24.png", height = 10, width = 7.5, units = "in")
+#ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest2_recipientsonlyupdated_2026_03_29.wmf", height = 10, width = 7.5, units = "in")
+
+#ggsave(variableplot2_recip, filename = "./Outputs/V3 Figures/diffplot_variable_recipientsonlyupdated_2025_11_24.png", height = 10, width = 7.5, units = "in")
+
+ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_mutationtest3_recipientsonlyupdated_2026_03_29.png", height = 10, width = 7.5, units = "in")
   
-pdf(file = "./Outputs/V3 Figures/diffplot_variable_recipientsonly_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#pdf(file = "./Outputs/V3 Figures/diffplot_variable_recipientsonly_updated_2025_11_24.pdf", height = 10, width = 7.5)
+#variableplot2_recip
+#dev.off()
+
+pdf(file = "./Outputs/V4 Figures/diffplot_variable_mutationtest3_recipientsonly_updated_2026_03_29.pdf", height = 10, width = 7.5)
 variableplot2_recip
 dev.off()
-
-
 
 ```
 
@@ -182,11 +195,20 @@ pre_extant_plot <- ggplot(data = poplistrescueprerecipsumbyparameter, aes(x = lo
 
 pre_popsize_plot <- ggplot(data = poplistrescueprerecipsumbyparameter, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Pop.Size)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(option = "A")+ scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = "Selection Strength (1/omega^2)", breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
 
-pdf(file = "./Outputs/V3 Figures/recipients_prerescue_extantupdated.pdf", height = 10, width = 7.5)
+#pdf(file = "./Outputs/V3 Figures/recipients_prerescue_extantupdated.pdf", height = 10, width = 7.5)
+#pre_extant_plot
+#dev.off()
+
+pdf(file = "./Outputs/V4 Figures/recipients_prerescue_extantupdated_2026_03_29_mutation3.pdf", height = 10, width = 7.5)
 pre_extant_plot
 dev.off()
 
-pdf(file = "./Outputs/V3 Figures/recipients_prerescue_popsizeupdated.pdf", height = 10, width = 7.5)
+
+#pdf(file = "./Outputs/V3 Figures/recipients_prerescue_popsizeupdated.pdf", height = 10, width = 7.5)
+#pre_popsize_plot
+#dev.off()
+
+pdf(file = "./Outputs/V4 Figures/recipients_prerescue_popsizeupdated_2026_03_29_mutation3.pdf", height = 10, width = 7.5)
 pre_popsize_plot
 dev.off()
 
