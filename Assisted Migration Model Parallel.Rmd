@@ -63,7 +63,7 @@ filter <- FALSE
 
 
 #Set values for all possible combinations of the input variables
-Paramdfsingle <- expand.grid(RunID = "A_2026_04_01", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Phenotype", "Multiple", "GradAdj", "GradEnvAdj")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
+Paramdfsingle <- expand.grid(RunID = "A_2026_05_05", Si = 50, K = 500, L = 20, phenvar = 0.3, S0 = 0.75, MuOff = 3, Sel = (1/(1:10)), Mig = c(0, 10^(-5:-1)), EnvType = c("Fixed", "Variable"), timeperiod = 600, deltaGradStart = 500, deltaGradRate = 0.05, deltaGradLength = 100, RescueModes = list(c("None", "Demographic", "Grad", "GradEnv", "Phenotype", "Multiple", "GradAdj", "GradEnvAdj")), RescueStart = 550, RescueSites = 0.1, RescueSize = 50, RescueLength = 1, RescueSourceNumber = 5)
 #Test by removing one mode at a time to see if one particular mode stops things
 #c("None", "Demographic", "Grad", "GradEnv", "Multiple")
 #leaving out None threw no errors
@@ -350,6 +350,9 @@ return(u)
 #Grad: rescue based on the closest population to the ending value of Grad
 #GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
 #Multiple: rescue based on a mix of 5 local populations
+#2026-04-15 Adding two more strategies based on mixing popualtions sensu Prober et al 2015
+#GradAdj: rescue based on a mix of 5 populations along the climate gradient
+#GradEnvAdj: rescue based on a mix of 5 populations based on the bivariate distance 
 #The last parameter is donrecplist: a 2d matrix with 2 columns. The first column is the IDs of donors, the second column is the IDs of recipients. The matrix will have 1 row per recipient population, unless strategy = "Multiple" then it will have (RescueSourceNumber x the number of recipient populations) rows.
 #Phenotype: rescue based on the population whose phenotype, rather than site, has the closest value to the ending values of Grand and Env (bivariate distance). This is meant as a theoretical limit on how good a match we can create. It's unlikely to be a practical strategy in real life.
 
@@ -381,10 +384,18 @@ donorrecipientsbase <- function(q2, strategies, NumRescueSites, LANDfuture, LAND
   #setup donor recipient matrix
   #set it up as a named data frame
 
-  drmat <- matrix(NA_integer_, ncol = 1+length(strategies[[1]])+sum(strategies[[1]]%in%c("Multiple","GradAjd", "GradEnvAdj"))*(NumRescueSources-1), nrow = length(recipients)) #this assumes 1 row per recipient, we'll resave the empty matrix if strategy = "multiple"
+  drmat <- matrix(NA_integer_, ncol = 1+length(strategies[[1]])+sum(strategies[[1]]%in%c("Multiple", "GradAdj", "GradEnvAdj"))*(NumRescueSources-1), nrow = length(recipients)) #this assumes 1 row per recipient, we'll resave the empty matrix if strategy = "multiple"
   drmat[,1] <- recipients
   colnames(drmat) <- rep(NA, ncol(drmat))
   colnames(drmat)[1] <- "Recipients"
+  
+  #A function for matching from multiple sources
+   minNum <- function(vec, num) {
+            nonNA <- vec[which(!is.na(vec))] 
+            nonNAindex <- rank(nonNA, ties = "random")
+            minindex <- as.numeric(names(nonNAindex)[which(nonNAindex %in% 1:NumRescueSources)])
+            return(minindex)
+        }
   
   for (qi in 1:length(strategies[[1]])){
     if(strategies[[1]][qi] == "None") {
@@ -405,18 +416,74 @@ donorrecipientsbase <- function(q2, strategies, NumRescueSites, LANDfuture, LAND
       drmat[,1+qi] <- sapply(t(drmat[,1]), function(a, b,c, d) {b[max.col(matrix(1/(as.matrix(dist(rbind(c[a,], d[b,])))[-1,1]), nrow = 1))]}, b = eligibledonors, c = LANDfuture, d = data.frame(Grad = colMeans(q2[,7,], na.rm = TRUE), Env = colMeans(q2[,8,],na.rm=TRUE)))
       colnames(drmat)[1+qi] <- strategies[[1]][qi]
     } else if (strategies[[1]][qi] == "Multiple") {
-        drmat[,(1+qi):dim(drmat)[2]] <- matrix(eligibledonors[knnx.index(eligibledonors, drmat[,1], k = min(NumRescueSources, length(eligibledonors), na.rm = TRUE))], nrow = nrow(drmat), ncol = NumRescueSources, byrow = FALSE)
-        colnames(drmat)[(1+qi):dim(drmat)[2]] <- rep(strategies[[1]][[qi]], NumRescueSources)
-    } else if (strategies[[1]][qi] == "GradAdj") 
+        drmat[,(1+qi):(qi+NumRescueSources)] <- matrix(eligibledonors[knnx.index(eligibledonors, drmat[,1], k = min(NumRescueSources, length(eligibledonors), na.rm = TRUE))], nrow = nrow(drmat), ncol = NumRescueSources, byrow = FALSE)
+        colnames(drmat)[(1+qi):(qi+NumRescueSources)] <- rep(strategies[[1]][[qi]], NumRescueSources)
+    } else if (strategies[[1]][qi] == "GradAdj"){
+        
+        #Set up a distance matrix from donors to recipient sites
+        distlong <- cbind(rep(LANDstarting$Grad[eligibledonors],NumRescueSites), c(rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[1,1]],length(eligibledonors)), 
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[2,1]],length(eligibledonors)),
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[3,1]],length(eligibledonors)),
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[4,1]],length(eligibledonors)),
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[5,1]],length(eligibledonors))),rep(NA, length(drmat[,1]*length(eligibledonors))))
+        distlong[,3] <- abs(distlong[,2]-distlong[,1])
+        colnames(distlong) <- c("DonorStart", "Midpoint", "Match")
       
+        
+        
+        distmat <- matrix(data = distlong[,3], nrow = NumRescueSites, ncol = length(eligibledonors),byrow = TRUE)
+        rownames(distmat) <- drmat[,1]
+        colnames(distmat) <- eligibledonors
+        
+        #choose the 5 best matches for each recipient 
+        
+        drmat[,(qi+NumRescueSources):(qi-1+2*(NumRescueSources))] <- t(apply(distmat, MARGIN = 1, FUN = minNum, simplify = TRUE))
+        
+     
+        colnames(drmat)[(qi+NumRescueSources):(qi-1+2*NumRescueSources)] <- rep(strategies[[1]][[qi]], NumRescueSources)
+     } else if (strategies[[1]][qi] == "GradEnvAdj"){
+      
+       #set up a distance matrix that accounts for grad and environment
+         
+       distlong2 <- cbind(rep(LANDstarting$Grad[eligibledonors],NumRescueSites), rep(LANDstarting$Env[eligibledonors], NumRescueSites),
+           c(rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[1,1]],length(eligibledonors)), 
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[2,1]],length(eligibledonors)),
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[3,1]],length(eligibledonors)),
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[4,1]],length(eligibledonors)),
+  rep(((LANDstarting$Grad+LANDfuture$Grad)/2)[drmat[5,1]],length(eligibledonors))),
+    c(rep(((LANDstarting$Env+LANDfuture$Env)/2)[drmat[1,1]],length(eligibledonors)),
+      rep(((LANDstarting$Env+LANDfuture$Env)/2)[drmat[2,1]],length(eligibledonors)),
+  rep(((LANDstarting$Env+LANDfuture$Env)/2)[drmat[3,1]],length(eligibledonors)),
+  rep(((LANDstarting$Env+LANDfuture$Env)/2)[drmat[4,1]],length(eligibledonors)),
+  rep(((LANDstarting$Env+LANDfuture$Env)/2)[drmat[5,1]],length(eligibledonors))),
+  rep(NA, length(drmat[,1]*length(eligibledonors))))
        
+      distlong2[,5] <- sqrt((distlong2[,3]-distlong2[,1])^2+(distlong2[,4]-distlong2[,2])^2)
+        colnames(distlong2) <- c("DonorStartGrad", "Env", "MidpointGrad", "MidpointEnv", "Match")
+        
+        
+        distmat2<- matrix(data = distlong2[,5], nrow = NumRescueSites, ncol = length(eligibledonors),byrow = TRUE)
+        rownames(distmat2) <- drmat[,1]
+        colnames(distmat2) <- eligibledonors
+  
+        #choose the 5 best matches for each recipient       
+        
+        drmat[,(qi-1+2*NumRescueSources):dim(drmat)[2]] <- t(apply(distmat2, MARGIN = 1, FUN = minNum, simplify = TRUE))
+        colnames(drmat)[(qi-1+2*(NumRescueSources)):dim(drmat)[[2]]]<-rep(strategies[[1]][[qi]], NumRescueSources)
+    }
+  
+    ##For strategies GradAdj and GradEnvAdj I need to take the functions I wrote for Grad and Env and rather than just taking the maximum, I need to look at that distance matrix and evenly space 5 populations between the max and the current. Actually what if I use the knnx.index function on the landscape values rather than the index values. That's the nxt thing to try
+    
   }
-  return(drmat)  
+    return(drmat)  
 }
 
 rescuebase <- function(p, donorcplist, K, strategy, RescueSize, NumRescueSites, L, funct2, NumRescueSources){
-  #First condense the multiple column donorcplist into a long format   
-  if (strategy == "Multiple") {
+  #First condense the strategies with multiple column donorcplist into a long format   
+  #2026_04_28 what I have to do in this if statement, is change strategy == to strategy %in% c(...)
+  #The I have to correct the instructions for donorcplistlong[,1&2] to identify those columns with a name that is equal to the column title
+  
+  if (strategy %in% c("Multiple", "GradAdj", "GradEnvAdj")) {
     donorcplistwide <- donorcplist
     donorcplistlong <- matrix(NA, nrow = nrow(donorcplist)*(ncol(donorcplist)-1), ncol = 2)
     donorcplistlong[,1] <- rep(donorcplist[,1], each = (ncol(donorcplist)-1))
@@ -733,8 +800,10 @@ if (sum(POPsim[,1,], na.rm = TRUE)!=0){
 
    
 } else {
-  donorrecipientslist <- matrix(NA_integer_, ncol = 1+length(PSL$RescueModes[[1]])+sum(PSL$RescueModes[[1]]=="Multiple")*(PSL$RescueSourceNumber-1), nrow = PSL$NumRescueSites) 
-  colnames(donorrecipientslist) <- c("Recipients", PSL$RescueModes[[1]], rep("Multiple", (PSL$RescueSourceNumber-1)))
+  donorrecipientslist <- matrix(NA_integer_, ncol = 1+length(PSL$RescueModes[[1]])+sum(PSL$RescueModes[[1]]%in%c("Multiple","GradAdj","GradEnvAdj"))*(PSL$RescueSourceNumber-1), nrow = PSL$NumRescueSites) 
+  RescueModesSS <- case_when(PSL$RescueModes[[1]] %in% c("None", "Demographic", "Grad", "GradEnv", "Phenotype") ~ 1,
+                             PSL$RescueModes[[1]] %in% c("Multiple", "GradAdj", "GradEnvAdj") ~ PSL$NumRescueSites)
+  colnames(donorrecipientslist) <- c("Recipients", rep(PSL$RescueModes[[1]],times = RescueModesSS))
 }
 
  #Save full post-rescue dataset
