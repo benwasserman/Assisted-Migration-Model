@@ -14,7 +14,8 @@ library(tidyverse)
 
 
 ```{r loaddata}
-load("RescueDataUpdated.Rdata")
+#load("RescueDataUpdated.Rdata")
+load("RescueData_Revision.Rdata")
 ```
 
 ```{r norescue}
@@ -48,7 +49,7 @@ Anova(PopSize_GLM_log)
 AIC(PopSize_GLM_log, PopSize_GLM)
 
 
-hist(Paramdfall)
+#hist(Paramdfall)
 Maladapt.Grad_GLM <- glm(Maladapt.Grad_None~EnvType*Sel*Mig, family = "gaussian", data = Paramdfall)
 summary(Maladapt.Grad_GLM)
 
@@ -62,30 +63,42 @@ Maladapt.Env_GLM_log <- glm(Maladapt.Env_None~EnvType*Sel*log10(Mig+0.000001), f
 summary(Maladapt.Env_GLM_log)
 
 
-Gradvar_GLM_lg <- glm()
+#Gradvar_GLM_lg <- glm()
 
 ```
 
 ```{r rescue}
 
+#6/12/26 I am adding Diff to the list of predictors in these regressions. That seems to be how they were structured in the tables submitted in the supplement during hte original submission, but I can't find them in the code anywhere. But making this one addition would get me to the regressions as structured in that submission.
+
 hist(filter(rescuecomb, Variable == "Extant")$Value)
-extant_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Extant")) 
+extant_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType*Diff, data = filter(rescuecomb, Variable  == "Extant")) 
 summary(extant_rescuelm)
+anova(extant_rescuelm)
+Anova(extant_rescuelm, Type = "III")
 plot(extant_rescuelm)
 
 hist(filter(rescuecomb, Variable == "Pop.Size")$Value)
-popsize_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Pop.Size")) 
+popsize_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType*Diff, data = filter(rescuecomb, Variable  == "Pop.Size")) 
 summary(popsize_rescuelm)
+anova(popsize_rescuelm)
+Anova(popsize_rescuelm, Type = "III")
 plot(popsize_rescuelm)
 
+
 hist(filter(rescuecomb, Variable =="Grad.Maladaptation")$Value)
-gradmal_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Grad.Maladaptation")) 
+gradmal_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType*Diff, data = filter(rescuecomb, Variable  == "Grad.Maladaptation")) 
 summary(gradmal_rescuelm)
+anova(gradmal_rescuelm)
+Anova(gradmal_rescuelm, Type = "III")
 plot(gradmal_rescuelm)
 
 hist(filter(rescuecomb, Variable =="Env.Maladaptation")$Value)
-envmal_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType, data = filter(rescuecomb, Variable  == "Env.Maladaptation")) 
+envmal_rescuelm <- lm(Value~Sel*log10(Mig+0.000001)*EnvType*Diff, data = filter(rescuecomb, Variable  == "Env.Maladaptation")) 
 summary(envmal_rescuelm)
+anova(envmal_rescuelm)
+Anova(envmal_rescuelm, Type = "III")
 plot(envmal_rescuelm)
+
 
 ```

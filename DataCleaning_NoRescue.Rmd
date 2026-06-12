@@ -36,9 +36,9 @@ datasubset <- function(x){
 
 #Note the parallel processing here is going to be rewritten to be used on a windows machine, but the model itself was run on mac
 
-#nameslist <- c("A_2025_10_29", "B_2025_10_30", "C_2025_10_30", "D_2025_10_30", "E_2025_10_30", "F_2025_10_31", "G_2025_10_31", "H_2025_11_01", "I_2025_11_01", "J_2025_11_02", "K_2025_11_02", "L_2025_11_02", "M_2025_11_03", "N_2025_11_04", "O_2025_11_04", "P_2025_11_05", "Q_2025_11_05", "R_2025_11_06", "S_2025_11_06", "T_2025_11_06", "U_2025_11_07", "V_2025_11_07", "W_2025_11_07", "X_2025_11_08", "Y_2025_11_08", "Z_2025_11_08", "AA_2025_11_08", "AB_2025_11_08", "AC_2025_11_08", "AD_2025_11_08")
+nameslist <- c("A_2026_05_17", "B_2026_05_17", "C_2026_05_18", "D_2026_05_18", "E_2026_05_18", "F_2026_05_19", "G_2026_05_19", "H_2026_05_19", "I_2026_05_20", "J_2026_05_20", "K_2026_05_20", "L_2026_05_21", "M_2026_05_21", "N_2026_05_21", "O_2026_05_22", "P_2026_05_22", "R_2026_05_24", "S_2026_05_25", "T_2026_05_25", "U_2026_05_26", "V_2026_05_26", "W_2026_05_26", "X_2026_05_27", "Y_2026_05_27", "Z_2026_05_28", "AA_2026_05_28", "AB_2026_05_28", "AC_2026_05_28", "AD_2026_05_29", "AE_2026_05_29")
 
-nameslist <- c("A_2026_05_06_omega=20" , "B_2026_05_07_omega=20")
+#nameslist <- c("A_2026_05_06_omega=20" , "B_2026_05_07_omega=20")
 
 #nameslist <- c("Test_6th_rescue_strategy_2025_10_29", "A_2025_10_29", "B_2025_10_30")
 
@@ -131,7 +131,7 @@ Paramsum$PopSize_None_mean[which(Paramsum$PopSize_None_mean==0)]<-NA
 
 #save.image("loadedFullListUpdated.Rdata")
 #save.image("loadedPhenotypeTestList.Rdata")
-save.image("loaded_Test_omega=20.Rdata")
+save.image("loaded_revision_List.Rdata")
 beep(sound = 6)
 
 ```
