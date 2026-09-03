@@ -27,7 +27,7 @@ library(beepr)
 
 ```{r definefunctions}
 datasubset <- function(x){
-  filter(x[[1]], Time == 600)
+  filter(x[[1]], Time == 501)
 }
 
 ```
@@ -41,6 +41,8 @@ nameslist <- c("A_2026_05_17", "B_2026_05_17", "C_2026_05_18", "D_2026_05_18", "
 #nameslist <- c("A_2026_05_06_omega=20" , "B_2026_05_07_omega=20")
 
 #nameslist <- c("Test_6th_rescue_strategy_2025_10_29", "A_2025_10_29", "B_2025_10_30")
+
+nameslist <- c("A_2026_05_06_omega=20", "B_2026_05_07_omega=20")
 
 #So There was an I dataset, but it was missing data for a single iteration out of the 120. Out of an abundance of caution I'm replacing the whole thing with the Z dataset 
 
@@ -131,7 +133,8 @@ Paramsum$PopSize_None_mean[which(Paramsum$PopSize_None_mean==0)]<-NA
 
 #save.image("loadedFullListUpdated.Rdata")
 #save.image("loadedPhenotypeTestList.Rdata")
-save.image("loaded_revision_List.Rdata")
+#save.image("loaded_revision_List.Rdata")
+save.image("loaded_omeg20List.Rdata")
 beep(sound = 6)
 
 ```
