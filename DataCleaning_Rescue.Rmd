@@ -28,8 +28,8 @@ library(officer)
 ```{r loaddata}
 #load("loadedFullListUpdated.Rdata")
 #load("loadedMutationTest3List.Rdata")
-#load("loaded_revision_List.Rdata")
-load("loaded_omeg20List.Rdata")
+load("loaded_revision_List.Rdata")
+#load("loaded_omeg20List.Rdata")
 ```
 
 There are 3 types of comparisons worth making:
@@ -40,12 +40,12 @@ There are 3 types of comparisons worth making:
 So far this only implements #1 & #3
 
 ```{r functions}
-#Find the data at time point 499, just before rescue occurs
+#Find the data at time point 550, just before rescue occurs
 prerescuedatasubset <- function(x){
-  filter(x[[1]], Time == 549)
+  filter(x[[1]], Time == 550)
 }
-
 ```
+
 
 ```{r cleanrescuedata}
 
@@ -71,6 +71,13 @@ extantfunc <- function(df){
 extantlist <- lapply(poplist, FUN = extantfunc)
 
 
+extantfunc2 <- function(df){
+  df2 <- df %>% mutate(Variable = "Extant", Value2 = case_when(is.na(Value) ~ NA, Value == 0 ~ 0, Value > 0 ~ 1)) %>% select(-Value) %>% rename(Value = Value2)
+  return(df2)
+}
+
+extantlist2 <- lapply(poplist, FUN = extantfunc2)
+
 #pivot everything so that we have differentials between each type of rescue and the no-rescue scenario
 datapivot <- function(df) {
   data.frame(df) %>% pivot_wider(names_from = Rescue, values_from = Value) %>% mutate(DemographicDiff = Demographic-None, GradDiff = Grad - None, GradEnvDiff = GradEnv - None, PhenDiff = Phenotype - None, MultipleDiff = Multiple - None, GradAdjDiff = GradAdj - None, GradEnvAdjDiff = GradEnvAdj -  None)
@@ -78,6 +85,7 @@ datapivot <- function(df) {
 
 
 extantlistrescue <- lapply(extantlist, FUN = datapivot)
+extantlistrescue2 <- lapply(extantlist2, FUN = datapivot)
 poplistrescue <- lapply(poplist, FUN = datapivot)
 gradlistrescue <- lapply(gradmatchlist, FUN = datapivot)
 envlistrescue <- lapply(envmatchlist, FUN = datapivot)
@@ -103,18 +111,34 @@ sumdf <- function(df){
   colSums(df[,4:18], na.rm = TRUE)
 }
 
+sumdf2 <- function(df){
+  colSums(df[,4:18], na.rm = FALSE)
+}
+
 meandf <- function(df){
   colMeans(df[,4:18], na.rm = TRUE)
 }
 
+#9/7/2026 Here I change the meandf function so that it populations whose size is listed as NA are converted to 0. NAs come from when the whole metapopulation is extinct and 0s from when some populations are still extant, but it means we make apples to oranges comparisons later on.
+
+
+meandfnona <- function(df){
+  colSums(df[,4:18], na.rm = TRUE)/nrow(df)
+  
+}
+
 extantlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(extantlistrescue, FUN = sumdf, simplify = TRUE))))
-poplistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(poplistrescue, FUN = meandf, simplify = TRUE))))
+extantlistrescuesum2 <- cbind(Paramdfall,data.frame(t(sapply(extantlistrescue2, FUN = sumdf2, simplify = TRUE))))
+poplistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(poplistrescue, FUN = meandfnona, simplify = TRUE))))
 gradlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradlistrescue, FUN = meandf, simplify = TRUE))))
 envlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envlistrescue, FUN = meandf, simplify = TRUE))))
 gradvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(gradvarlistrescue, FUN = meandf, simplify = TRUE))))
 envvarlistrescuesum <- cbind(Paramdfall,data.frame(t(sapply(envvarlistrescue, FUN = meandf, simplify = TRUE)))) 
 
 extantlistrescuecomb <-select(extantlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Extant")
+extantlistrescuecomb2 <-select(extantlistrescuesum2, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Extant")
+
+
 poplistrescuecomb <-select(poplistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Pop.Size")
 gradlistrescuecomb <-select(gradlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Grad.Maladaptation")
 envlistrescuecomb <-select(envlistrescuesum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Env.Maladaptation")
@@ -123,8 +147,14 @@ envvarlistrescuecomb <-select(envvarlistrescuesum, Sel, Mig, EnvType, Demographi
 
 rescuecomb <- rbind(extantlistrescuecomb, poplistrescuecomb, gradlistrescuecomb, envlistrescuecomb, gradvarlistrescuecomb, envvarlistrescuecomb) %>% pivot_longer(cols = DemographicDiff:GradEnvAdjDiff, names_to = "Diff", values_to = "Value")
 
+rescuecomb2 <- rbind(extantlistrescuecomb2, poplistrescuecomb, gradlistrescuecomb, envlistrescuecomb, gradvarlistrescuecomb, envvarlistrescuecomb) %>% pivot_longer(cols = DemographicDiff:GradEnvAdjDiff, names_to = "Diff", values_to = "Value")
+
 rescuecombplot <- rescuecomb %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>% summarize(Value = mean(Value, na.rm = TRUE), .groups = "keep")
 rescuecombplot$Diff <- factor(rescuecombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
+
+rescuecombplot2 <- rescuecomb2 %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>% summarize(Value = mean(Value, na.rm = TRUE), .groups = "keep")
+rescuecombplot$Diff <- factor(rescuecombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
+
 
 #Analyses
 summary(lm(DemographicDiff~EnvType*I(log10(Mig+0.000001))*Sel, data = extantlistrescuesum))
@@ -134,6 +164,8 @@ summary(lm(DemographicDiff~EnvType*I(log10(Mig+0.000001))*Sel, data = extantlist
 
 
 extantplot <- extantlistrescuesum %>% summarize(across(DemographicDiff:GradEnvAdjDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
+
+extantplot2 <- extantlistrescuesum2 %>% summarize(across(DemographicDiff:GradEnvAdjDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
 
 popplot <- poplistrescuesum %>% summarize(across(DemographicDiff:GradEnvAdjDiff, .fns = list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE))), .by = c(EnvType, Mig, Sel, MuMovement, Omega2grad))
 
@@ -163,6 +195,7 @@ recipients <- DRlistarray[,1,]
 #Recipient subsets
 #pre-allocate
 extantlistrescue_recip <- vector("list", length(extantlistrescue))
+extantlistrescue_recip2 <- vector("list", length(extantlistrescue2))
 poplistrescue_recip <- vector("list", length(poplistrescue))
 gradlistrescue_recip <- vector("list", length(gradlistrescue))
 envlistrescue_recip <- vector("list", length(envlistrescue))
@@ -173,6 +206,8 @@ envvarlistrescue_recip <- vector("list", length(envvarlistrescue))
 
 for (i in 1:length(extantlistrescue)){
 extantlistrescue_recip[[i]] <- filter(extantlistrescue[[i]], Site %in% recipients[,i])
+extantlistrescue_recip2[[i]] <- filter(extantlistrescue2[[i]], Site %in% recipients[,i])
+
 #need to include the others here, and then make the same manipulations to this subset as we did to the whole
 poplistrescue_recip[[i]] <- filter(poplistrescue[[i]], Site %in% recipients[,i])
 gradlistrescue_recip[[i]] <- filter(gradlistrescue[[i]], Site %in% recipients[,i])
@@ -181,15 +216,20 @@ gradvarlistrescue_recip[[i]] <- filter(gradvarlistrescue[[i]], Site %in% recipie
 envvarlistrescue_recip[[i]] <- filter(envvarlistrescue[[i]], Site %in% recipients[,i])}
 
 
-
 extantlistrescue_recipsum <- cbind(Paramdfall,data.frame(t(sapply(extantlistrescue_recip, FUN = sumdf, simplify = TRUE))))
-poplistrescue_recipsum <- cbind(Paramdfall,data.frame(t(sapply(poplistrescue_recip, FUN = meandf, simplify = TRUE))))
+extantlistrescue_recipsum2 <- cbind(Paramdfall,data.frame(t(sapply(extantlistrescue_recip2, FUN = sumdf2, simplify = TRUE))))
+
+poplistrescue_recipsum <- cbind(Paramdfall,data.frame(t(sapply(poplistrescue_recip, FUN = meandfnona, simplify = TRUE))))
 gradlistrescue_recipsum <- cbind(Paramdfall,data.frame(t(sapply(gradlistrescue_recip, FUN = meandf, simplify = TRUE))))
 envlistrescue_recipsum <- cbind(Paramdfall,data.frame(t(sapply(envlistrescue_recip, FUN = meandf, simplify = TRUE))))
 gradvarlistrescue_recipsum <- cbind(Paramdfall,data.frame(t(sapply(gradvarlistrescue_recip, FUN = meandf, simplify = TRUE))))
 envvarlistrescue_recipsum <- cbind(Paramdfall,data.frame(t(sapply(envvarlistrescue_recip, FUN = meandf, simplify = TRUE)))) 
 
+#Added on 9/9/2026 to remove any remaining 0s in 
+
 extantlistrescue_recipcomb <-select(extantlistrescue_recipsum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Extant")
+extantlistrescue_recipcomb2 <-select(extantlistrescue_recipsum2, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Extant")
+
 poplistrescue_recipcomb <-select(poplistrescue_recipsum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Pop.Size")
 gradlistrescue_recipcomb <-select(gradlistrescue_recipsum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Grad.Maladaptation")
 envlistrescue_recipcomb <-select(envlistrescue_recipsum, Sel, Mig, EnvType, DemographicDiff, GradDiff, GradEnvDiff, PhenDiff, MultipleDiff, GradAdjDiff, GradEnvAdjDiff) %>% mutate(Variable = "Env.Maladaptation")
@@ -198,11 +238,15 @@ envvarlistrescue_recipcomb <-select(envvarlistrescue_recipsum, Sel, Mig, EnvType
 
 rescue_recipcomb <- rbind(extantlistrescue_recipcomb, poplistrescue_recipcomb, gradlistrescue_recipcomb, envlistrescue_recipcomb, gradvarlistrescue_recipcomb, envvarlistrescue_recipcomb) %>% pivot_longer(cols = DemographicDiff:GradEnvAdjDiff, names_to = "Diff", values_to = "Value")
 
+rescue_recipcomb2 <- rbind(extantlistrescue_recipcomb2, poplistrescue_recipcomb, gradlistrescue_recipcomb, envlistrescue_recipcomb, gradvarlistrescue_recipcomb, envvarlistrescue_recipcomb) %>% pivot_longer(cols = DemographicDiff:GradEnvAdjDiff, names_to = "Diff", values_to = "Value")
+
 rescue_recipcombplot <- rescue_recipcomb %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>% summarize(Value = mean(Value, na.rm = TRUE), .groups = "keep")
 rescue_recipcombplot$Diff <- factor(rescue_recipcombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
 
+rescue_recipcombplot2 <- rescue_recipcomb2 %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>% summarize(Value = mean(Value, na.rm = TRUE), .groups = "keep")
+rescue_recipcombplot$Diff <- factor(rescue_recipcombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
 
-
+#, ValSum = sum(Value, na.rm = TRUE), Value = ValSum/Num, 
 
 ```
 
@@ -211,7 +255,7 @@ rescue_recipcombplot$Diff <- factor(rescue_recipcombplot$Diff, levels = c("Demog
 
 
 datalistpre <- mclapply(results_mclapplyall, FUN = prerescuedatasubset)
-poplistpre <- lapply(datalistpre, FUN = filter, (Variable == "Pop.Size"))
+poplistpre <- lapply(datalistpre, FUN = filter, ((Variable == "Pop.Size")&(Rescue == "PreRescue")))
 
 
 poplistprerecip <- vector("list", length(poplistpre))
@@ -221,8 +265,16 @@ for (j in 1:length(poplistprerecip)) {
   poplistprerecip[[j]]$Extant <- 1*(poplistprerecip[[j]]$Value > 0)
   }
 
+
+#9/7/2026 Here I started to change the popmeanfunc function so that it populations whose size is listed as NA are converted to 0.But since those only occur at this point if the whole metapopulation is extinct, and if the whole metapopulation is extinct before rescue then we're not testing rescue, it turns out to be unnecessary. popmeanfuncnona was the trial, but it turns out the results are identical. So I didn't have them affect anything.
+
+
 popmeanfunc <- function(df){
   colMeans(df[,5:6], na.rm = TRUE)
+}
+
+popmeanfuncnona <- function(df){
+  colSums(df[,5:6],na.rm=TRUE)/nrow(df)
 }
 
 popsumfunc <- function(df){
@@ -231,17 +283,28 @@ popsumfunc <- function(df){
 
 
 poplistprerecipsum <- sapply(poplistprerecip, FUN = popsumfunc, simplify = TRUE)
-poplistprerecipmean <-  sapply(poplistprerecip, FUN = popmeanfunc, simplify = TRUE)
+poplistprerecipmean <-  sapply(poplistprerecip, FUN = popmeanfuncnona, simplify = TRUE)
 poplistrescueprerecipsum <- cbind(Paramdfall, Extant = poplistprerecipsum[2,], Pop.Size = poplistprerecipmean[1,])
 
 poplistrescueprerecipsumbyparameter <- poplistrescueprerecipsum %>% group_by(Mig,Sel, EnvType) %>% summarize(Pop.Size = mean(Pop.Size, na.rm = TRUE), Extant = mean(Extant, na.rm = TRUE), .groups = "keep")
 
 
+for (j in 1:length(poplistpre)) {
+  poplistpre[[j]]$Extant <- 1*(poplistpre[[j]]$Value > 0)
+  }
+
+poplistpresum <- sapply(poplistpre, FUN= popsumfunc, simplify=TRUE)
+poplistpremean <-  sapply(poplistpre, FUN = popmeanfunc, simplify = TRUE)
+poplistrescuepresum <- cbind(Paramdfall, Extant = poplistpresum[2,], Pop.Size = poplistpremean[1,])
+
+poplistrescuepresumbyparameter <- poplistrescuepresum %>% group_by(Mig,Sel, EnvType) %>% summarize(Pop.Size = mean(Pop.Size, na.rm = TRUE), Extant = mean(Extant, na.rm = TRUE), .groups = "keep")
+
 ```
 
 ```{r savedata}
 #save.image("RescueDataUpdated.Rdata")
-#save.image("RescueData_Revision.Rdata")
-save.image("RescueData_omega20.Rdata")
+#save.image("RescueData_Revision2.Rdata")
+save.image("RescueData_Revision3.Rdata")
+#save.image("RescueData_omega20.Rdata")
 ```
 

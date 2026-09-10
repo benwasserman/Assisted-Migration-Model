@@ -27,7 +27,7 @@ library(beepr)
 
 ```{r definefunctions}
 datasubset <- function(x){
-  filter(x[[1]], Time == 501)
+  filter(x[[1]], Time == 600)
 }
 
 ```
@@ -42,7 +42,7 @@ nameslist <- c("A_2026_05_17", "B_2026_05_17", "C_2026_05_18", "D_2026_05_18", "
 
 #nameslist <- c("Test_6th_rescue_strategy_2025_10_29", "A_2025_10_29", "B_2025_10_30")
 
-nameslist <- c("A_2026_05_06_omega=20", "B_2026_05_07_omega=20")
+#nameslist <- c("A_2026_05_06_omega=20", "B_2026_05_07_omega=20")
 
 #So There was an I dataset, but it was missing data for a single iteration out of the 120. Out of an abundance of caution I'm replacing the whole thing with the Z dataset 
 
@@ -54,6 +54,8 @@ for (i in 1:length(nameslist)) {
   results_mclapplycombined[[i]] <- results_mclapply
 }
 Paramdfall <- ld2d(Paramdfcombined)
+
+
 
 #Commented out the line above, because in this case, with one list, we can just use Paramdfcombined
 #Paramdfall <- Paramdfcombined[[1]]

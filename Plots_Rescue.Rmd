@@ -25,11 +25,11 @@ library(beepr)
 
 #load("RescueDataUpdated.Rdata")
 #load("RescueDataMutationTest3.Rdata")
-load("RescueData_Revision.Rdata")
+load("RescueData_Revision3.Rdata")
 #load("Rescuedata_omega20.Rdata")
 ```
 
-```{r plotallpops}
+```{r prepare}
 
 #To add the omega2grad = 20 data but keep these tiles the same, I manually recoded to 12, but I need to turn that off for future uses
 Paramsum$Sel[which(Paramsum$Sel==(0.05))]<-(1/12)
@@ -46,6 +46,21 @@ lgtxtsize <- 8
  keywidth <- 0.9
   keyheight <- 0.9
 
+  #put in the NAs for extant manuaully where they are for popsize
+
+
+rescuecombplotsave <-rescuecombplot
+rescuecombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$Mig%in%c(0.001,0.0001))&(rescue_recipcombplot$EnvType=="Variable")&(rescue_recipcombplot$Variable%in%c("Extant", "Pop.Size")))]<-NA
+  
+rescue_recipcombplotsave <-rescue_recipcombplot
+rescue_recipcombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$Mig%in%c(0.001,0.0001))&(rescue_recipcombplot$EnvType=="Variable")&(rescue_recipcombplot$Variable=="Extant"))]<-NA
+
+  
+```
+
+
+```{r plotallpops}
+  
 #Fixed Environment
 
 fexplot <- ggplot(data = filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Extant"))), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + facet_grid(.~Diff, labeller = labeller(Diff = difflabs)) + scale_fill_gradient2(name = "Populations\nExtant", limits = range(filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Extant")))$Value), low = "red", mid = "white", high = "blue", midpoint = 0) + scale_x_continuous(name = NULL, breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = xsmalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1), legend.title=element_text(size = lgtxtsize), legend.text = element_text(size = smalltxtsize), legend.key.width = unit(keywidth, "lines"), legend.key.height = unit(keyheight, "lines"), strip.text = element_text(size = xsmalltxtsize))
@@ -53,7 +68,7 @@ fexplot <- ggplot(data = filter(rescuecombplot, ((EnvType == "Fixed")&(Variable 
 
 fpsplot <- ggplot(data = filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Pop.Size"))), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + facet_grid(.~Diff, labeller = labeller(Diff = difflabs)) + scale_fill_gradient2(name = "Population\nSize", limits = range(filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Pop.Size")))$Value), low = "red", mid = "white", high = "blue", midpoint = 0) + scale_x_continuous(name = NULL, breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = xsmalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1), legend.title=element_text(size = lgtxtsize), legend.text = element_text(size = smalltxtsize), legend.key.width = unit(keywidth, "lines"), legend.key.height = unit(keyheight, "lines"), strip.text = element_text(size = xsmalltxtsize, color = 'white'), strip.background = element_rect(color = 'white'))
 
-fgmplot <- ggplot(data = filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Grad.Maladaptation"))), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + facet_grid(.~Diff, labeller = labeller(Diff = difflabs)) + scale_fill_gradient2(name = "EV1 Maladaptation", limits = range(filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Grad.Maladaptation")))$Value), low = "red", mid = "white", high = "blue", midpoint = 0) + scale_x_continuous(name = NULL, breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10"), limits = c(-13,0)) + theme_classic() + theme(axis.text.y = element_text(size = xsmalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1), legend.title=element_text(size = lgtxtsize), legend.text = element_text(size = smalltxtsize), legend.key.width = unit(keywidth, "lines"), legend.key.height = unit(keyheight, "lines"), strip.text = element_text(size = xsmalltxtsize, color = 'white'), strip.background = element_rect(color = 'white'))
+fgmplot <- ggplot(data = filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Grad.Maladaptation"))), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + facet_grid(.~Diff, labeller = labeller(Diff = difflabs)) + scale_fill_gradient2(name = "EV1 Maladaptation", limits = range(filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Grad.Maladaptation")))$Value), low = "red", mid = "white", high = "blue", midpoint = 0) + scale_x_continuous(name = NULL, breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = xsmalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1), legend.title=element_text(size = lgtxtsize), legend.text = element_text(size = smalltxtsize), legend.key.width = unit(keywidth, "lines"), legend.key.height = unit(keyheight, "lines"), strip.text = element_text(size = xsmalltxtsize, color = 'white'), strip.background = element_rect(color = 'white'))
 
 femplot <- ggplot(data = filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Env.Maladaptation"))), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Value)) + geom_tile() + facet_grid(.~Diff, labeller = labeller(Diff = difflabs)) + scale_fill_gradient2(name = "EV2 Maladaptation", limits = range(filter(rescuecombplot, ((EnvType == "Fixed")&(Variable == "Env.Maladaptation")))$Value), low = "red", mid = "white", high = "blue", midpoint = 0) + scale_x_continuous(name = NULL, breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = xsmalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1), legend.title=element_text(size = lgtxtsize), legend.text = element_text(size = smalltxtsize), legend.key.width = unit(keywidth, "lines"), legend.key.height = unit(keyheight, "lines"), strip.text = element_text(size = xsmalltxtsize, color = 'white'), strip.background = element_rect(color = 'white'))
 
@@ -74,7 +89,7 @@ fixedplot2 <- annotate_figure(fixedplot, left = textGrob("Selection Strength (1/
 
 #ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_omega2_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_2026_09_03.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
   
 #pdf(file = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #fixedplot2
@@ -88,9 +103,9 @@ ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_2026_09_03.pn
 #fixedplot2
 #dev.off()
 
-pdf(file = "./Outputs/V4 Figures/diffplot_fixed_omega2_2026_06_25.pdf", height = 10, width = 7.5)
-fixedplot2
-dev.off()
+#pdf(file = "./Outputs/V4 Figures/diffplot_fixed_omega2_2026_06_25.pdf", height = 10, width = 7.5)
+#fixedplot2
+#dev.off()
 
 #Variable Environment  
 
@@ -122,7 +137,7 @@ variableplot2 <- annotate_figure(variableplot, left = textGrob("Selection Streng
 
 #ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_omega20_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_2026_09_03.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
 
 #pdf(file = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #variableplot2
@@ -144,6 +159,7 @@ ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_2026_09
 
 
 ```{r plotrecipientpops}
+
 
 #Fixed Environment
 
@@ -190,7 +206,7 @@ fixedplot2_recip <- annotate_figure(fixedplot_recip, left = textGrob("Selection 
 #fixedplot2_recip
 #dev.off()
 
-ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_recipientsonly_2026_09_03.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_recipientsonly_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
 
 #Variable Environment  
 
@@ -222,7 +238,7 @@ variableplot2_recip <- annotate_figure(variableplot_recip, left = textGrob("Sele
   
 #ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_omega20_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_2026_09_03.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
 
 #pdf(file = "./Outputs/V3 Figures/diffplot_variable_recipientsonly_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #variableplot2_recip
@@ -232,7 +248,7 @@ ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_r
 #variableplot2_recip
 #dev.off()
 
-#pdf(file = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_2026_06_07.pdf", height = 10, width = 7.5)
+#pdf(file = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_2026_06_07.pdf", height = 10, width = 7.5) 
 #variableplot2_recip
 #dev.off()
 
@@ -245,9 +261,29 @@ ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_r
 ```{r prerescueextantplots}
 
 
-pre_extant_plot <- ggplot(data = poplistrescueprerecipsumbyparameter, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Extant)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(option = "A") + scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10", "", "1/20"), limits = c(-13,0)) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
+pre_recip_extant_plot <- ggplot(data = mutate(poplistrescueprerecipsumbyparameter, Extant2 = case_when(Extant == 0 ~ NA, TRUE ~ Extant)), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Extant2)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(name = "Mean Number\nof Recipient\nSites Extant\nBefore Rescue", option = "A") + scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
 
-pre_popsize_plot <- ggplot(data = poplistrescueprerecipsumbyparameter, aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Pop.Size)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(option = "A")+ scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10", "", "1/20"), limits = c(-13,0)) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
+
+pre_recip_popsize_plot <- ggplot(data = mutate(poplistrescueprerecipsumbyparameter, Pop.Size2 = case_when(Pop.Size == 0 ~ NA, TRUE ~ Pop.Size)), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Pop.Size)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(name = "Mean Population\nSize of Recipient\nSites Before\nRescue",option = "A")+ scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
+
+
+ggsave(pre_recip_extant_plot, filename = "./Outputs/V4 Figures/recipients_prerescue_extant_2026_09_09.png", height = 10, width = 7.5, units = "in")
+
+ggsave(pre_recip_popsize_plot, filename = "./Outputs/V4 Figures/recipients_prerescue_popsize_2026_09_09.png", height = 10, width = 7.5, units = "in")
+
+
+
+
+pre_extant_plot <- ggplot(data = mutate(poplistrescuepresumbyparameter, Extant2 = case_when(Extant == 0 ~ NA, TRUE ~ Extant)), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Extant2)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(name = "Mean Number of\nSites Extant\nBefore Rescue",option = "A") + scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
+
+pre_popsize_plot <- ggplot(data = mutate(poplistrescuepresumbyparameter, Pop.Size2 = case_when(Pop.Size == 0 ~ NA, TRUE ~ Pop.Size)), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Pop.Size2)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(name = "Mean Population\nSize of Sites\nBefore Rescue", option = "A")+ scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
+
+ggsave(pre_extant_plot, filename = "./Outputs/V4 Figures/prerescue_extant_2026_09_09.png", height = 10, width = 7.5, units = "in")
+
+ggsave(pre_popsize_plot, filename = "./Outputs/V4 Figures/prerescue_popsize_2026_09_09.png", height = 10, width = 7.5, units = "in")
+
+
+
 
 #pdf(file = "./Outputs/V3 Figures/recipients_prerescue_extantupdated.pdf", height = 10, width = 7.5)
 #pre_extant_plot
@@ -262,9 +298,9 @@ pre_popsize_plot <- ggplot(data = poplistrescueprerecipsumbyparameter, aes(x = l
 #dev.off()
 
 
-pdf(file = "./Outputs/V4 Figures/recipients_prerescue_extant_omega20_2026_06_25.pdf", height = 10, width = 7.5)
-pre_extant_plot
-dev.off()
+#pdf(file = "./Outputs/V4 Figures/recipients_prerescue_extant_omega20_2026_06_25.pdf", height = 10, width = 7.5)
+#pre_extant_plot
+#dev.off()
 
 
 #pdf(file = "./Outputs/V3 Figures/recipients_prerescue_popsizeupdated.pdf", height = 10, width = 7.5)
@@ -279,9 +315,9 @@ dev.off()
 #pre_popsize_plot
 #dev.off()
 
-pdf(file = "./Outputs/V4 Figures/recipients_prerescue_popsize_omega20_2026_06_25.pdf", height = 10, width = 7.5)
-pre_popsize_plot
-dev.off()
+#pdf(file = "./Outputs/V4 Figures/recipients_prerescue_popsize_omega20_2026_06_25.pdf", height = 10, width = 7.5)
+#pre_popsize_plot
+#dev.off()
 
 beep()
 ```
