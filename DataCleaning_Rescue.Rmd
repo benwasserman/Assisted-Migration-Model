@@ -153,7 +153,7 @@ rescuecombplot <- rescuecomb %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>%
 rescuecombplot$Diff <- factor(rescuecombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
 
 rescuecombplot2 <- rescuecomb2 %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>% summarize(Value = mean(Value, na.rm = TRUE), .groups = "keep")
-rescuecombplot$Diff <- factor(rescuecombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
+rescuecombplot$Diff <- factor(rescuecombplot2$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
 
 
 #Analyses
@@ -244,7 +244,7 @@ rescue_recipcombplot <- rescue_recipcomb %>% group_by(Sel, Mig, EnvType, Variabl
 rescue_recipcombplot$Diff <- factor(rescue_recipcombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
 
 rescue_recipcombplot2 <- rescue_recipcomb2 %>% group_by(Sel, Mig, EnvType, Variable, Diff) %>% summarize(Value = mean(Value, na.rm = TRUE), .groups = "keep")
-rescue_recipcombplot$Diff <- factor(rescue_recipcombplot$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
+rescue_recipcombplot$Diff <- factor(rescue_recipcombplot2$Diff, levels = c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff"))
 
 #, ValSum = sum(Value, na.rm = TRUE), Value = ValSum/Num, 
 

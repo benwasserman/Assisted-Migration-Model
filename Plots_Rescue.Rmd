@@ -36,7 +36,7 @@ Paramsum$Sel[which(Paramsum$Sel==(0.05))]<-(1/12)
 rescuecombplot$Sel[which(rescuecombplot$Sel==(0.05))]<-(1/12)
 rescue_recipcombplot$Sel[which(rescue_recipcombplot$Sel==(0.05))]<-(1/12)
 
-difflabs <- c("Nearest Neighbor", "Match 1EV", "Match 2EVs", "Match Phenotypes", "Multiple Nearest Neighbors", "Adjust for 1EV", "Adjust for 2EV")
+difflabs <- c("Nearest Neighbor", "Match 1EV", "Match 2EVs", "Match Phenotypes", "Genetic Mixture", "Adjust for 1EV", "Adjust for 2EV")
 names(difflabs) <- c("DemographicDiff", "GradDiff", "GradEnvDiff", "PhenDiff", "MultipleDiff", "GradAdjDiff", "GradEnvAdjDiff")
 
 xsmalltxtsize <- 6
@@ -89,7 +89,7 @@ fixedplot2 <- annotate_figure(fixedplot, left = textGrob("Selection Strength (1/
 
 #ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_omega2_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_noNA_2026_09_11.png", height = 10, width = 7.5, units = "in")
   
 #pdf(file = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #fixedplot2
@@ -137,7 +137,7 @@ variableplot2 <- annotate_figure(variableplot, left = textGrob("Selection Streng
 
 #ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_omega20_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_noNA_2026_09_11.png", height = 10, width = 7.5, units = "in")
 
 #pdf(file = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #variableplot2
@@ -206,7 +206,7 @@ fixedplot2_recip <- annotate_figure(fixedplot_recip, left = textGrob("Selection 
 #fixedplot2_recip
 #dev.off()
 
-ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_recipientsonly_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_recipientsonly_noNA_2026_09_11.png", height = 10, width = 7.5, units = "in")
 
 #Variable Environment  
 
@@ -238,7 +238,7 @@ variableplot2_recip <- annotate_figure(variableplot_recip, left = textGrob("Sele
   
 #ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_omega20_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_noNA_2026_09_09.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_noNA_2026_09_11.png", height = 10, width = 7.5, units = "in")
 
 #pdf(file = "./Outputs/V3 Figures/diffplot_variable_recipientsonly_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #variableplot2_recip
