@@ -24,7 +24,7 @@ library(beepr)
 ```{r loaddata}
 
 #load("RescueDataUpdated.Rdata")
-load("RescueData_IncreaseMutationEffect_2026_09_13.Rdata")
+load("RescueData_BothMutationChanges2_2026_09_13.Rdata")
 #load("RescueData_Revision3.Rdata")
 #load("Rescuedata_omega20.Rdata")
 ```
@@ -53,13 +53,13 @@ rescuecombplotsave <-rescuecombplot
 #Variable
 rescuecombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$EnvType=="Variable")&(rescue_recipcombplot$Variable%in%c("Extant", "Pop.Size")))]<-NA
 #Fixed
-rescuecombplot$Value[which((rescue_recipcombplot$Sel==1)&(!(rescue_recipcombplot$Mig==0.01))&(rescue_recipcombplot$EnvType=="Fixed")&(rescue_recipcombplot$Variable%in%c("Extant", "Pop.Size")))]<-NA 
+rescuecombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$Mig%in%c(0,0.00001,0.0001))&(rescue_recipcombplot$EnvType=="Fixed")&(rescue_recipcombplot$Variable%in%c("Extant", "Pop.Size")))]<-NA 
  
 rescue_recipcombplotsave <-rescue_recipcombplot
 #Variable
 rescue_recipcombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$EnvType=="Variable")&(rescue_recipcombplot$Variable=="Extant"))]<-NA
 #Fixed
-rescue_recipcombplot$Value[which((rescue_recipcombplot$Sel==1)&(!(rescue_recipcombplot$Mig==0.01))&(rescue_recipcombplot$EnvType=="Fixed")&(rescue_recipcombplot$Variable=="Extant"))]<-NA
+rescue_recipcombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$Mig%in%c(0,0.00001,0.0001))&(rescue_recipcombplot$EnvType=="Fixed")&(rescue_recipcombplot$Variable=="Extant"))]<-NA
 
   
 ```
@@ -95,7 +95,7 @@ fixedplot2 <- annotate_figure(fixedplot, left = textGrob("Selection Strength (1/
 
 #ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_omega2_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_noNA_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2, filename = "./Outputs/V4 Figures/diffplot_fixed_noNA_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
   
 #pdf(file = "./Outputs/V3 Figures/diffplot_fixed_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #fixedplot2
@@ -143,7 +143,7 @@ variableplot2 <- annotate_figure(variableplot, left = textGrob("Selection Streng
 
 #ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_omega20_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_noNA_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2, filename = "./Outputs/V4 Figures/diffplot_variable_noNA_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
 
 #pdf(file = "./Outputs/V3 Figures/diffplot_variable_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #variableplot2
@@ -212,7 +212,7 @@ fixedplot2_recip <- annotate_figure(fixedplot_recip, left = textGrob("Selection 
 #fixedplot2_recip
 #dev.off()
 
-ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_recipientsonly_noNA_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(fixedplot2_recip, filename = "./Outputs/V4 Figures/diffplot_fixed_recipientsonly_noNA_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
 
 #Variable Environment  
 
@@ -244,7 +244,7 @@ variableplot2_recip <- annotate_figure(variableplot_recip, left = textGrob("Sele
   
 #ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_omega20_2026_06_25.png", height = 10, width = 7.5, units = "in")
 
-ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_noNA_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(variableplot2_recip, filename = "./Outputs/V4 Figures/diffplot_variable_recipientsonly_noNA_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
 
 #pdf(file = "./Outputs/V3 Figures/diffplot_variable_recipientsonly_updated_2025_11_24.pdf", height = 10, width = 7.5)
 #variableplot2_recip
@@ -273,9 +273,9 @@ pre_recip_extant_plot <- ggplot(data = mutate(poplistrescueprerecipsumbyparamete
 pre_recip_popsize_plot <- ggplot(data = mutate(poplistrescueprerecipsumbyparameter, Pop.Size2 = case_when(Pop.Size == 0 ~ NA, TRUE ~ Pop.Size)), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Pop.Size)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(name = "Mean Population\nSize of Recipient\nSites Before\nRescue",option = "A")+ scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
 
 
-ggsave(pre_recip_extant_plot, filename = "./Outputs/V4 Figures/recipients_prerescue_extant_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(pre_recip_extant_plot, filename = "./Outputs/V4 Figures/recipients_prerescue_extant_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
 
-ggsave(pre_recip_popsize_plot, filename = "./Outputs/V4 Figures/recipients_prerescue_popsize_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(pre_recip_popsize_plot, filename = "./Outputs/V4 Figures/recipients_prerescue_popsize_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
 
 
 
@@ -284,9 +284,9 @@ pre_extant_plot <- ggplot(data = mutate(poplistrescuepresumbyparameter, Extant2 
 
 pre_popsize_plot <- ggplot(data = mutate(poplistrescuepresumbyparameter, Pop.Size2 = case_when(Pop.Size == 0 ~ NA, TRUE ~ Pop.Size)), aes(x = log10(Mig+0.000001), y = -(1/Sel), fill = Pop.Size2)) + geom_tile() + facet_grid(~EnvType) + scale_fill_viridis(name = "Mean Population\nSize of Sites\nBefore Rescue", option = "A")+ scale_x_continuous(name = "Proportion Migrants", breaks = log10(c(0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1)), labels = c("0", "1e-05", "1e-04", "1e-03", "1e-02", "1e-01")) + scale_y_continuous(name = NULL, breaks = -1:-10, labels = c("1", "1/2", "1/3", "1/4", "1/5", "1/6", "1/7", "1/8", "1/9", "1/10")) + theme_classic() + theme(axis.text.y = element_text(size = smalltxtsize), axis.text.x  = element_text(size = smalltxtsize, angle = 45, vjust = 1, hjust = 1))
 
-ggsave(pre_extant_plot, filename = "./Outputs/V4 Figures/prerescue_extant_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(pre_extant_plot, filename = "./Outputs/V4 Figures/prerescue_extant_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
 
-ggsave(pre_popsize_plot, filename = "./Outputs/V4 Figures/prerescue_popsize_IncreaseMutationEffect_2026_09_13.png", height = 10, width = 7.5, units = "in")
+ggsave(pre_popsize_plot, filename = "./Outputs/V4 Figures/prerescue_popsize_BothMutationChanges_2026_09_13.png", height = 10, width = 7.5, units = "in")
 
 
 
