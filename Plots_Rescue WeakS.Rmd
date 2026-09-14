@@ -51,12 +51,18 @@ lgtxtsize <- 8
   #put in the NAs for extant manuaully where they are for popsize
   #I will need to change this manually for each sensitivity run
 rescuecombplotsave <-rescuecombplot
+#Variable
 rescuecombplot$Value[which((rescue_recipcombplot$Sel==1)&(!(rescue_recipcombplot$Mig==0.001))&(rescue_recipcombplot$EnvType=="Variable")&(rescue_recipcombplot$Variable%in%c("Extant", "Pop.Size")))]<-NA
-  
-rescue_recipcombplotsave <-rescue_recipcombplot
-rescue_recipcombplot$Value[which((rescue_recipcombplot$Sel==1)&(!(rescue_recipcombplot$Mig==c(0.001)))&(rescue_recipcombplot$EnvType=="Variable")&(rescue_recipcombplot$Variable=="Extant"))]<-NA
+#Fixed
+rescuecombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$Mig%in%c(0,0.00001))&(rescue_recipcombplot$EnvType=="Fixed")&(rescue_recipcombplot$Variable%in%c("Extant", "Pop.Size")))]<-NA
 
-  
+
+rescue_recipcombplotsave <-rescue_recipcombplot
+#Variable
+rescue_recipcombplot$Value[which((rescue_recipcombplot$Sel==1)&(!(rescue_recipcombplot$Mig==c(0.001)))&(rescue_recipcombplot$EnvType=="Variable")&(rescue_recipcombplot$Variable=="Extant"))]<-NA
+#Fixed
+rescue_recipcombplot$Value[which((rescue_recipcombplot$Sel==1)&(rescue_recipcombplot$Mig%in%c(0,0.00001))&(rescue_recipcombplot$EnvType=="Fixed")&(rescue_recipcombplot$Variable=="Extant"))]<-NA
+
 ```
 
 
