@@ -29,7 +29,7 @@ library(patchwork)
 ```{r loaddata}
 #load("loadedFullListUpdated.Rdata")
 #load("loadedPhenotypeTestList.Rdata")
-load("loaded_MutationTestList_2026_09_13.Rdata")
+load("loaded_MutationTest4List_2026_09_15.Rdata")
 #load("loaded_revision_List.Rdata")
 #load("loaded_omeg20List.Rdata")
 ```
@@ -127,7 +127,7 @@ nonesplot <- ggarrange(explot, popplot, gradplot, envplot, gradvarplot, envvarpl
 nonesplot2 <- annotate_figure(nonesplot, left = textGrob("Selection Strength (1/omega^2)", rot = 90, vjust = 1, gp = gpar(cex=1)), bottom = textGrob("Proportion Migrants", vjust= -0.25, gp = gpar(cex=1)), top = textGrob("EV2 Invariant                               EV2 Spatially Variant", gp = gpar(cex = 1)))
 
 
-pdf(file = "./Outputs/V4 Figures/nonesplot_2026_09_13_MutationTest.pdf", height = 10, width = 7.5)
+pdf(file = "./Outputs/V4 Figures/nonesplot_2026_09_15_MutationTest4.pdf", height = 10, width = 7.5)
 nonesplot2
 dev.off()
 
@@ -136,7 +136,7 @@ dev.off()
 
 #ggsave(nonesplot2, filename = "./Outputs/V4 Figures/nonesplotMutationTest3_2026_03_29.png", height = 10, width = 7.5, units = "in")
 
-ggsave(nonesplot2, filename = "./Outputs/V4 Figures/nonesplot_2026_09_13_MutationTest.png", height = 10, width = 7.5, units = "in")
+ggsave(nonesplot2, filename = "./Outputs/V4 Figures/nonesplot_2026_09_14_MutationTest4.png", height = 10, width = 7.5, units = "in")
 
 
 
