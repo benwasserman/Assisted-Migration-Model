@@ -135,8 +135,8 @@ Paramsum$PopSize_None_mean[which(Paramsum$PopSize_None_mean==0)]<-NA
 
 #save.image("loadedFullListUpdated.Rdata")
 #save.image("loadedPhenotypeTestList.Rdata")
-#save.image("loaded_revision_List.Rdata")
-save.image("loaded_omeg20List.Rdata")
+save.image("loaded_revision_List.Rdata")
+#save.image("loaded_omeg20List.Rdata")
 beep(sound = 6)
 
 ```
