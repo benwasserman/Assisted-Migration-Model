@@ -44,7 +44,7 @@ datasubset <- function(x){
 
 #nameslist <- c("A_2026_05_06_omega=20", "B_2026_05_07_omega=20")
 
-nameslist <- c("A_2025_10_29")
+nameslist <- c("AE_2026_05_19")
 
 #So There was an I dataset, but it was missing data for a single iteration out of the 120. Out of an abundance of caution I'm replacing the whole thing with the Z dataset 
 
