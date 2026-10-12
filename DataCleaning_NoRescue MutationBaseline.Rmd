@@ -6,8 +6,8 @@ output: html_document
 ---
 
 
-Process no-rescue scenario data
-IncreaseMutationEffect requires "A_2025_10_08_MutationTest_Outputs.Rdata"
+Process no-rescue scenario data for baseline, requires one of the simulations from the full run
+ "AE_2026_05_29__Outputs.Rdata"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -44,7 +44,7 @@ datasubset <- function(x){
 
 #nameslist <- c("A_2026_05_06_omega=20", "B_2026_05_07_omega=20")
 
-nameslist <- c("AE_2026_05_19")
+nameslist <- c("AE_2026_05_29")
 
 #So There was an I dataset, but it was missing data for a single iteration out of the 120. Out of an abundance of caution I'm replacing the whole thing with the Z dataset 
 
@@ -117,10 +117,10 @@ gradvararray <- ld2a(gradvarlist)
 envvararray <- ld2a(envvarlist)
 
 Gradmatcharray <- gradarray
-Gradmatcharray[,5,] <- as.numeric(Gradmatcharray[,5,]) - rbind(landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,])
+Gradmatcharray[,5,] <- as.numeric(Gradmatcharray[,5,]) - rbind(landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,],landarrayending[,1,])
 
 Envmatcharray <- envarray
-Envmatcharray[,5,] <- as.numeric(Envmatcharray[,5,]) - rbind(landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,])
+Envmatcharray[,5,] <- as.numeric(Envmatcharray[,5,]) - rbind(landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,],landarrayending[,2,])
 
   
 Paramdfall$Extant_None <- apply(matrix(as.numeric(poparray[1:50,5,]), nrow = 50, byrow = FALSE), MARGIN = 2, FUN = function(x) {sum(x>0, na.rm = TRUE)})
@@ -139,7 +139,7 @@ Paramsum$PopSize_None_mean[which(Paramsum$PopSize_None_mean==0)]<-NA
 #save.image("loadedPhenotypeTestList.Rdata")
 #save.image("loaded_revision_List.Rdata")
 #save.image("loaded_omeg20List.Rdata")
-save.image("loaded_MutationTest4List_2026_09_15.Rdata")
+save.image("loaded_MutationTest4List_2026_10_11.Rdata")
 beep(sound = 6)
 
 ```
