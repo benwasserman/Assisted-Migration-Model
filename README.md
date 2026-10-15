@@ -8,3 +8,5 @@ Plots_NoRescue.Rmd – Creates Figure 1
 DataCleaning_Rescue.Rmd – shapes the data for the rescue plots
 Plots_Rescue.Rmd – Creates the remaining Figures
 Regressions.Rmd – Runs the regression analyses
+
+Parallel versions of these data cleaning and plotting files were made for the sensitivity runs to keep output filenames straight
