@@ -450,11 +450,11 @@ NumRescueSites <- floor(Si*RescueSites) #Convert proportion of sites to a number
 #GradEnv: rescue based on the closest population to the ending values of Grad and Env (bivariate distance)
 
 #Multiple: rescue based on a mix of 5 local populations, not based on Grad or Env
-RescueMode <- "Grad" 
+RescueMode <- "GradEnv" 
 RescueSourceNumber <- 5 #Number of sources to pull from if mode = "Multiple"
 
 #Run ID for the sensitivity analysis. Usually I've been using a date
-RunID <- "RescueTest2024_01_04Grad"
+RunID <- "RescueTest2024_01_04GradEnv"
 
 #Set values for parameters (migration, selection, environment type (fixed or variable))
 MigSelvals <- data.frame(Mig = rep(c(0.9, 0.99, 0.999, 0.9999, 0.99999, 1),each = 20), Sel = rep(1:10,12), Envmode = c(rep("Fixed",10), rep("Variable",10)))
